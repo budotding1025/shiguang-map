@@ -1,0 +1,564 @@
+window.TIMELINE_DATA = {
+  title: "时光地图",
+  subtitle: "同一年里，中国和西方各自在做什么",
+  yearMin: -3000,
+  yearMax: 2026,
+  eras: [
+    { id: "dawn", label: "文明曙光", from: -3000, to: -800 },
+    { id: "axis", label: "轴心时代", from: -800, to: -200 },
+    { id: "empire", label: "大帝国", from: -200, to: 500 },
+    { id: "medieval", label: "中古世界", from: 500, to: 1400 },
+    { id: "voyage", label: "大航海", from: 1400, to: 1750 },
+    { id: "modern", label: "近现代", from: 1750, to: 2026 }
+  ],
+  events: [
+    {
+      id: "pyramids",
+      year: -2560,
+      approx: true,
+      side: "west",
+      era: "dawn",
+      title: "埃及金字塔",
+      summary: "尼罗河边，人们用石头堆起通向天空的山。",
+      why: "说明很早就有人能组织成千上万的劳动者，也相信死后的世界。",
+      tags: ["建筑", "信仰"]
+    },
+    {
+      id: "shang-oracle",
+      year: -1300,
+      approx: true,
+      side: "cn",
+      era: "dawn",
+      title: "商朝与甲骨文",
+      summary: "把问题刻在龟甲上，问天地，也留下中国最早的系统文字。",
+      why: "文字让记忆可以跨过一代又一代，不再只靠嘴巴传。",
+      tags: ["文字", "商"]
+    },
+    {
+      id: "hammurabi",
+      year: -1754,
+      approx: true,
+      side: "west",
+      era: "dawn",
+      title: "汉谟拉比法典",
+      summary: "两河流域把规矩刻在石头上：伤害别人要怎么赔。",
+      why: "法律被写下来，就比较难被某一个人随便改口。",
+      tags: ["法律"]
+    },
+    {
+      id: "zhou-fengjian",
+      year: -1046,
+      side: "cn",
+      era: "dawn",
+      title: "周朝建立",
+      summary: "周天子把土地分给亲戚和功臣，大家各管一块。",
+      why: "这是中国早期的国家管理方式，也留下「礼」的传统。",
+      tags: ["制度", "周"]
+    },
+    {
+      id: "confucius",
+      year: -500,
+      approx: true,
+      side: "cn",
+      era: "axis",
+      title: "孔子与诸子百家",
+      summary: "乱世里很多人在想：人该怎么相处，国家该怎么治。",
+      why: "后来两千年的学堂、家庭规矩，都还能看见这些讨论的影子。",
+      tags: ["思想"]
+    },
+    {
+      id: "socrates",
+      year: -399,
+      side: "west",
+      era: "axis",
+      title: "苏格拉底之死",
+      summary: "雅典有人专门问「你真的知道吗」，最后被城邦判处死刑。",
+      why: "西方后来特别看重提问、辩论和独立思考，这一页很有名。",
+      tags: ["思想"]
+    },
+    {
+      id: "athens-democracy",
+      year: -508,
+      side: "west",
+      era: "axis",
+      title: "雅典的公民大会",
+      summary: "一小部分自由成年男子，可以投票决定城邦的事。",
+      why: "它不是今天的民主，但「公民要参与公共事务」这个想法从这里长出来。",
+      tags: ["制度"]
+    },
+    {
+      id: "qin-unify",
+      year: -221,
+      side: "cn",
+      era: "empire",
+      title: "秦统一六国",
+      summary: "车同轨、书同文：度量衡和文字被统一到一套标准。",
+      why: "很大的土地要靠统一的规矩才能转起来。这也是「中国」作为一个整体更清晰的时刻。",
+      tags: ["帝国", "制度"]
+    },
+    {
+      id: "rome-republic",
+      year: -509,
+      approx: true,
+      side: "west",
+      era: "axis",
+      title: "罗马共和国",
+      summary: "罗马人用元老院、执政官和法律来管理城邦，后来越扩越大。",
+      why: "西方许多制度词汇，比如共和国、元老、公民，都和罗马有关。",
+      tags: ["制度", "罗马"]
+    },
+    {
+      id: "zhangqian",
+      year: -138,
+      side: "cn",
+      era: "empire",
+      title: "张骞通西域",
+      summary: "汉朝使者向西走，丝绸、葡萄、音乐开始在路上相遇。",
+      why: "世界不是两块互不相干的拼图，路一通，东西就会交换。",
+      tags: ["交流", "汉"]
+    },
+    {
+      id: "augustus",
+      year: -27,
+      side: "west",
+      era: "empire",
+      title: "罗马帝国开始",
+      summary: "奥古斯都成为第一位皇帝，地中海几乎变成罗马的内湖。",
+      why: "和秦汉一样，都要回答：这么大的地方，靠什么管得住？",
+      tags: ["帝国", "罗马"]
+    },
+    {
+      id: "shiji",
+      year: -91,
+      approx: true,
+      side: "cn",
+      era: "empire",
+      title: "司马迁写《史记》",
+      summary: "一个人把远古到汉武帝的故事写成可查的长河。",
+      why: "中国人后来习惯「从历史里找教训」，《史记》是很重要的源头。",
+      tags: ["书写", "汉"]
+    },
+    {
+      id: "cai-lun",
+      year: 105,
+      side: "cn",
+      era: "empire",
+      title: "蔡伦改进造纸",
+      summary: "纸变得更便宜、更好写，知识不再只能刻在竹简上。",
+      why: "材料一变，读书的人就能变多。西方这时还多用羊皮。",
+      tags: ["发明"]
+    },
+    {
+      id: "rome-roads",
+      year: 120,
+      approx: true,
+      side: "west",
+      era: "empire",
+      title: "罗马大道与万民法",
+      summary: "条条大路通罗马；不同民族的人，也开始共用一些法律。",
+      why: "帝国靠的不只是军队，还有路、税和共同的规矩。",
+      tags: ["制度", "罗马"]
+    },
+    {
+      id: "three-kingdoms",
+      year: 220,
+      side: "cn",
+      era: "empire",
+      title: "三国开始",
+      summary: "一个大一统的帝国裂开，英雄故事从此讲了一千多年。",
+      why: "分裂时期往往也是思想、宗教和民族大融合的时期。",
+      tags: ["分裂"]
+    },
+    {
+      id: "west-rome-fall",
+      year: 476,
+      side: "west",
+      era: "empire",
+      title: "西罗马帝国结束",
+      summary: "西部的罗马城不再是中心，欧洲进入许多小王国的时代。",
+      why: "同一时期中国也经历长久分裂，但后来再次统一；欧洲很长时间没有再统一。",
+      tags: ["转折"]
+    },
+    {
+      id: "grand-canal",
+      year: 605,
+      approx: true,
+      side: "cn",
+      era: "medieval",
+      title: "隋朝大运河",
+      summary: "把南方的粮食和北方的都城用一条水路连起来。",
+      why: "工程能改变一个国家的「呼吸方式」：粮从哪来，人往哪走。",
+      tags: ["工程"]
+    },
+    {
+      id: "tang-chang-an",
+      year: 650,
+      approx: true,
+      side: "cn",
+      era: "medieval",
+      title: "唐长安：世界都会",
+      summary: "街上能遇见波斯商人、日本遣唐使，诗和音乐都很盛。",
+      why: "开放的都城会吸引远方的人。盛唐的自信，有很大一部分来自交流。",
+      tags: ["交流", "唐"]
+    },
+    {
+      id: "xuanzang",
+      year: 629,
+      side: "cn",
+      era: "medieval",
+      title: "玄奘西行",
+      summary: "一位僧人走过沙漠和高山，去印度求经，再把见闻带回来。",
+      why: "求知可以是一次真正的远征。他走的路，也是一条文明交流的路。",
+      tags: ["交流", "信仰"]
+    },
+    {
+      id: "charlemagne",
+      year: 800,
+      side: "west",
+      era: "medieval",
+      title: "查理曼加冕",
+      summary: "西欧出现一个想继承罗马的大国王，和教会站在一起。",
+      why: "当时世界上有几块大文明同时发光：唐、阿拉伯帝国、查理曼的欧洲。",
+      tags: ["帝国"]
+    },
+    {
+      id: "baghdad",
+      year: 830,
+      approx: true,
+      side: "west",
+      era: "medieval",
+      title: "巴格达的智慧宫",
+      summary: "学者们把希腊、波斯、印度的书译成阿拉伯文，数学和医学往前跳。",
+      why: "知识会搬家。很多后来欧洲重新读到的古代书，先在这里被保存和翻译。",
+      tags: ["知识", "交流"]
+    },
+    {
+      id: "bi-sheng",
+      year: 1048,
+      approx: true,
+      side: "cn",
+      era: "medieval",
+      title: "毕昇的活字",
+      summary: "用胶泥做成一个个活字，印完还能拆了再排。",
+      why: "印刷让同样的知识被很多人同时读到。西方类似的突破要再等四百年。",
+      tags: ["发明", "宋"]
+    },
+    {
+      id: "song-market",
+      year: 1100,
+      approx: true,
+      side: "cn",
+      era: "medieval",
+      title: "宋朝的市井与纸币",
+      summary: "城里夜市热闹，还出现了世界上较早的纸币。",
+      why: "商业一发达，普通人的日子也会写进画里、笔记里，而不只是帝王家。",
+      tags: ["生活", "宋"]
+    },
+    {
+      id: "bologna",
+      year: 1088,
+      approx: true,
+      side: "west",
+      era: "medieval",
+      title: "博洛尼亚大学",
+      summary: "欧洲出现较早的大学，老师和学生组成一个求学的共同体。",
+      why: "后来的大学传统从这里长出来：有课程、有辩论、有学位。",
+      tags: ["知识"]
+    },
+    {
+      id: "marco-polo",
+      year: 1271,
+      side: "west",
+      era: "medieval",
+      title: "马可·波罗东行",
+      summary: "一位威尼斯少年走陆路来到元朝，把东方写成欧洲人爱听的故事。",
+      why: "故事会改变地图。很多欧洲人是先听故事，才想去更远的海。",
+      tags: ["交流"]
+    },
+    {
+      id: "yuan",
+      year: 1271,
+      side: "cn",
+      era: "medieval",
+      title: "元朝：跨欧亚的帝国",
+      summary: "蒙古人的马蹄把东西方的路重新踩宽，驿站可以传很远的信。",
+      why: "暴力扩张和交流常常缠在一起。路宽了，商品、技术和灾难都会走得更快。",
+      tags: ["帝国", "交流"]
+    },
+    {
+      id: "zheng-he",
+      year: 1405,
+      side: "cn",
+      era: "voyage",
+      title: "郑和出使西洋",
+      summary: "巨大的船队驶向东南亚、印度和非洲东岸，主要是示好与朝贡。",
+      why: "中国人到达印度洋，比哥伦布横渡大西洋还早。目的却很不一样。",
+      tags: ["航海", "明"]
+    },
+    {
+      id: "gutenberg",
+      year: 1450,
+      approx: true,
+      side: "west",
+      era: "voyage",
+      title: "古腾堡印刷术",
+      summary: "金属活字和印刷机让《圣经》和科学书飞快复制。",
+      why: "当很多人能读到同一本书，宗教、科学和新闻都会加速。",
+      tags: ["发明"]
+    },
+    {
+      id: "columbus",
+      year: 1492,
+      side: "west",
+      era: "voyage",
+      title: "哥伦布到达美洲",
+      summary: "欧洲船只误打误撞连上了另一块大陆，世界开始被织成一张网。",
+      why: "农作物、贵金属、疾病和人口都开始跨洋流动，有发现，也有伤害。",
+      tags: ["航海"]
+    },
+    {
+      id: "da-vinci",
+      year: 1503,
+      approx: true,
+      side: "west",
+      era: "voyage",
+      title: "达·芬奇画《蒙娜丽莎》",
+      summary: "一个人既画画，也研究人体、机械和飞行。",
+      why: "文艺复兴把「观察世界」当成荣耀。好奇本身成为一件被赞美的事。",
+      tags: ["艺术", "科学"]
+    },
+    {
+      id: "newton",
+      year: 1687,
+      side: "west",
+      era: "voyage",
+      title: "牛顿发表《原理》",
+      summary: "用数学描述天上地下的运动，好像世界有一套可计算的规矩。",
+      why: "科学革命让人相信：仔细观察，就能发现隐藏的秩序。",
+      tags: ["科学"]
+    },
+    {
+      id: "kangxi-map",
+      year: 1708,
+      approx: true,
+      side: "cn",
+      era: "voyage",
+      title: "康熙年间的全国地图",
+      summary: "清廷请来欧洲测绘士，用新方法画出更准确的疆域。",
+      why: "同一时期中西已经在宫廷里见面：天文、数学、地图成为交流的语言。",
+      tags: ["科学", "清"]
+    },
+    {
+      id: "watt",
+      year: 1769,
+      side: "west",
+      era: "modern",
+      title: "瓦特改良蒸汽机",
+      summary: "机器开始不知疲倦地转动，工厂改变了城市和乡村。",
+      why: "动力一变，世界的速度就变了。谁先进入这个速度，谁就先改写规则。",
+      tags: ["发明", "工业"]
+    },
+    {
+      id: "usa-1776",
+      year: 1776,
+      side: "west",
+      era: "modern",
+      title: "美国独立宣言",
+      summary: "一群殖民地的人写下：人拥有某些不可剥夺的权利。",
+      why: "理想和现实往往有距离，但文件会成为后人争取权利时的根据。",
+      tags: ["制度"]
+    },
+    {
+      id: "french-rev",
+      year: 1789,
+      side: "west",
+      era: "modern",
+      title: "法国大革命",
+      summary: "旧制度被冲开，自由、平等的口号传遍欧洲。",
+      why: "普通人也开始觉得国家的事和自己有关。过程激烈，影响极深。",
+      tags: ["转折"]
+    },
+    {
+      id: "opium-war",
+      year: 1840,
+      side: "cn",
+      era: "modern",
+      title: "鸦片战争",
+      summary: "工业时代的舰队敲开清朝的国门，中国被迫进入新的世界规则。",
+      why: "不是「谁更聪明」，而是世界的速度已经变了。从此中国开始漫长的自我更新。",
+      tags: ["转折", "清"]
+    },
+    {
+      id: "ww1",
+      year: 1914,
+      side: "west",
+      era: "modern",
+      title: "第一次世界大战",
+      summary: "欧洲的联盟把全世界拖进战争，旧帝国纷纷摇晃。",
+      why: "现代战争动员整个社会。科技能造福，也能放大伤害。",
+      tags: ["战争"]
+    },
+    {
+      id: "xinhai",
+      year: 1911,
+      side: "cn",
+      era: "modern",
+      title: "辛亥革命",
+      summary: "两千多年的帝制结束，中国开始寻找新的国家形式。",
+      why: "结束一种制度容易，建立让大家安心生活的新秩序很难，这是一整段探索。",
+      tags: ["转折"]
+    },
+    {
+      id: "prc",
+      year: 1949,
+      side: "cn",
+      era: "modern",
+      title: "中华人民共和国成立",
+      summary: "中国重新成为一个独立自主、面向现代化的国家。",
+      why: "这是当代中国所有故事的起点之一，也是读今天新闻时的背景。",
+      tags: ["当代"]
+    },
+    {
+      id: "moon",
+      year: 1969,
+      side: "west",
+      era: "modern",
+      title: "人类登上月球",
+      summary: "阿波罗11号把脚印留在另一个世界上。",
+      why: "当人能离开地球看地球，历史的舞台突然变大了。",
+      tags: ["科学"]
+    },
+    {
+      id: "reform",
+      year: 1978,
+      side: "cn",
+      era: "modern",
+      title: "改革开放",
+      summary: "中国重新大幅度打开窗户，加入全球的贸易与知识流动。",
+      why: "你今天用的许多东西、读的许多书，都和这扇重新打开的窗有关。",
+      tags: ["当代", "交流"]
+    },
+    {
+      id: "www",
+      year: 1991,
+      side: "west",
+      era: "modern",
+      title: "万维网走向公众",
+      summary: "网页让普通人也能发布和查找信息，世界缩成一块屏幕。",
+      why: "信息再次变得便宜。和造纸、印刷一样，载体变了，学习的方式也会变。",
+      tags: ["发明", "当代"]
+    }
+  ],
+  pairs: [
+    {
+      id: "axial-age",
+      kind: "sync",
+      title: "轴心时代：两边都在问大问题",
+      cnId: "confucius",
+      westId: "socrates",
+      same: "大约同一大段时间，中国和希腊都有人在问：人怎样活才好？城邦或国家怎样才公正？",
+      different: "中国更常把答案放在家庭、礼和秩序里；希腊更常放在广场上的辩论和个人的提问里。",
+      question: "如果孔子遇见苏格拉底，你猜他们会先问对方哪一个问题？"
+    },
+    {
+      id: "two-empires",
+      kind: "theme",
+      title: "两个大帝国：秦汉与罗马",
+      cnId: "qin-unify",
+      westId: "augustus",
+      same: "都要把很大的土地、很多不同的人管起来：修路、收税、颁布统一的规矩。",
+      different: "中国更早统一文字；罗马把公民和法律的传统留得很深。秦比罗马称帝早了约两百年。",
+      question: "如果没有统一的文字，边关的一封信，首都的人还看得懂吗？"
+    },
+    {
+      id: "silk-road",
+      kind: "sync",
+      title: "丝绸之路的两端",
+      cnId: "zhangqian",
+      westId: "augustus",
+      same: "汉朝和罗马是当时欧亚大陆两端最强的两个大经济体，丝绸、玻璃、香料在中间流动。",
+      different: "他们很少直接见面，中间要经过很多绿洲和国家。所以彼此想象对方，常常像听故事。",
+      question: "一件罗马人穿的丝绸衣服，路上可能经过几双手？"
+    },
+    {
+      id: "paper-vs-parchment",
+      kind: "theme",
+      title: "纸与羊皮：知识写在哪",
+      cnId: "cai-lun",
+      westId: "rome-roads",
+      same: "两边都需要记录法律、信件和学问，都在寻找更好的书写材料。",
+      different: "中国把纸做得更便宜；地中海世界很长一段时间仍用昂贵的羊皮。材料贵，书就少，读书人也就少。",
+      question: "如果一本练习册贵得像一件衣服，教室里还会有多少本书？"
+    },
+    {
+      id: "split-and-after",
+      kind: "sync",
+      title: "帝国裂开之后",
+      cnId: "three-kingdoms",
+      westId: "west-rome-fall",
+      same: "很大的统一政权都会遇到分裂。分裂并不等于「什么都停了」，文化仍在走。",
+      different: "中国后来多次重新统一；西欧很长时间是许多王国并存，共同的是宗教和拉丁文，而不是一个皇帝。",
+      question: "重新统一和长期分立，对语言、货币、出行各有什么影响？"
+    },
+    {
+      id: "three-lights",
+      kind: "sync",
+      title: "同一时期的三盏灯",
+      cnId: "tang-chang-an",
+      westId: "charlemagne",
+      same: "公元八、九世纪，唐、阿拉伯世界和西欧都在建设自己的中心。",
+      different: "长安是当时最大都会之一；巴格达以翻译和学术著名；查理曼的欧洲则刚从分裂中聚拢。",
+      question: "如果一位商人要选一个城市开店，八世纪他更可能去哪？为什么？"
+    },
+    {
+      id: "printing-gap",
+      kind: "theme",
+      title: "活字：毕昇与古腾堡",
+      cnId: "bi-sheng",
+      westId: "gutenberg",
+      same: "都让文字可以批量复制，知识不再只靠手抄。",
+      different: "毕昇大约早四百年；古腾堡的金属活字遇上字母文字和后来的宗教改革，传播速度特别快。汉字字数多，活字的难度也不一样。",
+      question: "为什么同样是印刷，在不同地方「改变世界的速度」会不一样？"
+    },
+    {
+      id: "two-voyages",
+      kind: "theme",
+      title: "郑和与哥伦布：两种出海",
+      cnId: "zheng-he",
+      westId: "columbus",
+      same: "十五世纪前后，两边都有人把船开到自己原来地图的外面。",
+      different: "郑和的船队更大，主要是访问与朝贡，后来没有持续殖民；哥伦布的航行开启了欧洲对美洲的占领和全球贸易。",
+      question: "「先到」和「改变后来的世界」，是同一件事吗？"
+    },
+    {
+      id: "science-meet",
+      kind: "sync",
+      title: "科学开始互相看见",
+      cnId: "kangxi-map",
+      westId: "newton",
+      same: "十七、十八世纪，观测、数学和地图成为跨语言的工具。",
+      different: "欧洲出现了牛顿那样的体系化科学；清朝宫廷引入了测绘和天文，但没有同样的科学共同体向全社会铺开。",
+      question: "一张更准确的地图，能改变一个国家对「自己有多大」的感觉吗？"
+    },
+    {
+      id: "speed-change",
+      kind: "theme",
+      title: "世界突然变快",
+      cnId: "opium-war",
+      westId: "watt",
+      same: "工业力量会改写国家之间的关系，谁掌握新动力，谁就更有能力定规则。",
+      different: "蒸汽机先在英国铺开；清朝仍按原来的节奏治理一个农业大帝国，直到被强行拖进新速度。",
+      question: "如果游戏突然从走棋变成竞速，原来的高手要先练习什么？"
+    },
+    {
+      id: "paper-to-web",
+      kind: "theme",
+      title: "载体再一次变便宜",
+      cnId: "cai-lun",
+      westId: "www",
+      same: "造纸和互联网都让「把想法传给陌生人」的成本下降。",
+      different: "纸让一本书能被许多人读；网络让几乎每个人都能发布。便宜之后，筛选和判断就变得更重要。",
+      question: "信息变多以后，怎样才算「真的知道」？"
+    }
+  ]
+};

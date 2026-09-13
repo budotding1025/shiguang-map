@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>时光地图 · 中西对照</title>
+  <link rel="stylesheet" href="css/app.css?v=7" />
+</head>
+<body data-mode="timeline">
+  <header class="app-header">
+    <div class="brand">
+      <h1>时光地图</h1>
+      <p>同一年里，中国和西方各自在做什么</p>
+    </div>
+    <div class="header-actions">
+      <div class="modes" role="tablist">
+        <button class="mode active" data-mode="timeline" type="button">时间线</button>
+        <button class="mode" data-mode="pairs" type="button">对照卡片</button>
+        <button class="mode" data-mode="notes" type="button">读书笔记</button>
+      </div>
+      <button class="btn cinnabar" id="btn-add-event" type="button">添加事件</button>
+      <button class="btn indigo" id="btn-add-note" type="button">夹一页笔记</button>
+      <button class="btn ghost" id="btn-export" type="button">导出</button>
+      <button class="btn ghost" id="btn-import" type="button">导入</button>
+      <button class="btn ghost" id="btn-help" type="button">怎样用</button>
+      <input id="import-file" type="file" accept="application/json,.json" class="hidden" />
+    </div>
+  </header>
+
+  <div class="toolbar" id="timeline-toolbar">
+    <div id="era-bar"></div>
+    <div class="zoom-wrap">
+      <span>远</span>
+      <input id="zoom" type="range" min="0.4" max="4" step="0.1" value="1.1" />
+      <span>近</span>
+    </div>
+    <div class="search">
+      <input id="search" type="search" placeholder="搜事件、人物、发明…" />
+    </div>
+  </div>
+
+  <div class="stage-shell" id="view-timeline">
+    <div class="scroller" id="scroller">
+      <div class="stage" id="stage"></div>
+    </div>
+    <aside class="side-panel empty" id="detail">
+      点时间线上的圆点，看这一年的故事。上面是中国，下面是西方，同一条竖线就是同一年。
+    </aside>
+  </div>
+
+  <section class="cards" id="view-pairs"></section>
+  <section class="notes-view" id="view-notes"></section>
+
+  <div class="modal-backdrop hidden" id="modal"></div>
+
+  <script src="js/data.js?v=5"></script>
+  <script src="js/app.js?v=5"></script>
+</body>
+</html>
