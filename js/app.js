@@ -639,6 +639,7 @@
       '<div class="help"><h2>怎样用这张时光地图</h2>' +
       "<p>上面一条是中国，下面一条是西方。中国上方的红色色带是朝代骨架：夏商西周……一直到今天。粗圈是朝代大事件，实心圆是你自己加的，金色菱形是读书笔记。</p>" +
       "<p>点朝代色带或顶部「朝代」按钮，可以看这一朝已有哪些事，再往里加自己的时间点。</p>" +
+      "<p>在时间线上滚动鼠标滚轮：向上放大、向下缩小（对准鼠标位置缩放）。按住 Shift 再滚，或左右滑动触控板，可以左右移动时间轴。</p>" +
       "<p>对照卡片专门看「相同」和「不同」。有的是同一时期发生的，有的是同类事情、时间并不相同——地图会标明。</p>" +
       "<p>在线版：https://budotding1025.github.io/shiguang-map/ 。笔记存在这台电脑的浏览器里，换设备前请先「导出」。</p>" +
       '<button class="btn primary" id="help-ok" type="button">知道了</button></div>'
@@ -712,29 +713,49 @@
     if (this.files[0]) importData(this.files[0]);
     this.value = "";
   });
-  zoomInput.addEventListener("input", function () {
-    const mid = scroller.scrollLeft + scroller.clientWidth / 2;
-    const yearAtMid = YEAR_MIN + (mid - 80) / state.pxPerYear;
-    state.pxPerYear = Number(zoomInput.value);
+  function setZoom(next, anchorClientX) {
+    const prev = state.pxPerYear;
+    const clamped = Math.min(4, Math.max(0.4, next));
+    if (Math.abs(clamped - prev) < 0.001) return;
+    const rect = scroller.getBoundingClientRect();
+    const anchorX = anchorClientX != null
+      ? (anchorClientX - rect.left + scroller.scrollLeft)
+      : (scroller.scrollLeft + scroller.clientWidth / 2);
+    const yearAtAnchor = YEAR_MIN + (anchorX - 80) / prev;
+    state.pxPerYear = clamped;
+    zoomInput.value = String(clamped.toFixed(1));
     renderTimeline();
-    scroller.scrollLeft = yearToX(yearAtMid) - scroller.clientWidth / 2;
+    scroller.scrollLeft = yearToX(yearAtAnchor) - (anchorClientX != null
+      ? (anchorClientX - rect.left)
+      : scroller.clientWidth / 2);
+  }
+
+  zoomInput.addEventListener("input", function () {
+    setZoom(Number(zoomInput.value));
   });
   searchInput.addEventListener("input", function () {
     state.query = (searchInput.value || "").trim().toLowerCase();
     renderTimeline();
   });
   scroller.addEventListener("wheel", function (e) {
-    if (!e.ctrlKey && !e.metaKey) return;
+    const mostlyHorizontal = Math.abs(e.deltaX) > Math.abs(e.deltaY);
+    if (e.shiftKey || mostlyHorizontal) {
+      e.preventDefault();
+      scroller.scrollLeft += (mostlyHorizontal ? e.deltaX : e.deltaY);
+      return;
+    }
     e.preventDefault();
-    const next = Math.min(4, Math.max(0.4, state.pxPerYear + (e.deltaY > 0 ? -0.15 : 0.15)));
-    zoomInput.value = String(next.toFixed(1));
-    zoomInput.dispatchEvent(new Event("input"));
+    const step = Math.min(0.45, Math.max(0.08, Math.abs(e.deltaY) * 0.0025));
+    const next = state.pxPerYear + (e.deltaY > 0 ? -step : step);
+    setZoom(next, e.clientX);
   }, { passive: false });
   document.addEventListener("keydown", function (e) {
     if (e.key === "Escape") closeModal();
     if (state.mode !== "timeline") return;
     if (e.key === "ArrowRight") scroller.scrollLeft += 80;
     if (e.key === "ArrowLeft") scroller.scrollLeft -= 80;
+    if (e.key === "=" || e.key === "+") setZoom(state.pxPerYear + 0.2);
+    if (e.key === "-" || e.key === "_") setZoom(state.pxPerYear - 0.2);
   });
 
   renderEras();
