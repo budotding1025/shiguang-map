@@ -71,12 +71,48 @@ button { cursor: pointer; }
 
 .toolbar {
   display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 20px 10px;
+  border-bottom: 1px solid var(--rule);
+}
+.toolbar-row {
+  display: flex;
   gap: 8px;
   align-items: center;
-  padding: 8px 20px;
-  border-bottom: 1px solid var(--rule);
   flex-wrap: wrap;
 }
+.toolbar-row.tools { justify-content: flex-end; }
+.toolbar-label {
+  flex: 0 0 auto;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  color: var(--gold);
+  min-width: 2.5em;
+}
+.dynasty-bar {
+  display: flex;
+  gap: 4px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  max-width: 100%;
+  padding-bottom: 2px;
+}
+.dynasty-btn {
+  border: 1px solid var(--rule);
+  background: transparent;
+  padding: 3px 8px;
+  font-size: 12px;
+  color: var(--cinnabar);
+  white-space: nowrap;
+  border-radius: 2px;
+}
+.dynasty-btn.active,
+.dynasty-btn:hover {
+  background: rgba(156, 43, 29, 0.08);
+  border-color: var(--cinnabar);
+}
+.search { margin-left: 0; display: flex; gap: 8px; align-items: center; }
 .era-btn {
   border: 0;
   background: transparent;
@@ -156,8 +192,46 @@ button { cursor: pointer; }
   top: 8px;
   font-size: 11px;
   letter-spacing: 0.2em;
-  color: rgba(44, 36, 24, 0.35);
+  color: rgba(44, 36, 24, 0.28);
   writing-mode: horizontal-tb;
+}
+
+.dynasty-band {
+  position: absolute;
+  top: 4%;
+  height: 18%;
+  z-index: 1;
+  border: 1px solid rgba(156, 43, 29, 0.18);
+  border-left: 0;
+  background: rgba(156, 43, 29, 0.06);
+  cursor: pointer;
+  padding: 0;
+  margin: 0;
+  overflow: hidden;
+}
+.dynasty-band:nth-child(even of .dynasty-band),
+.dynasty-band.alt {
+  background: rgba(156, 43, 29, 0.11);
+}
+.dynasty-band.selected {
+  background: rgba(156, 43, 29, 0.18);
+  outline: 2px solid var(--cinnabar);
+  outline-offset: -2px;
+}
+.dynasty-band span {
+  display: block;
+  padding: 6px 4px 0;
+  font-size: 11px;
+  color: var(--cinnabar);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}
+.dynasty-band .dynasty-years {
+  font-size: 10px;
+  color: rgba(156, 43, 29, 0.65);
+  padding: 2px 4px 0;
 }
 
 .rail-label {
@@ -216,9 +290,14 @@ button { cursor: pointer; }
   transform: translate(-50%, -50%);
   padding: 0;
 }
-.event-dot.cn { color: var(--cinnabar); top: 28%; }
+.event-dot.cn { color: var(--cinnabar); top: 32%; }
 .event-dot.west { color: var(--indigo); top: 72%; }
 .event-dot.custom { background: currentColor; }
+.event-dot.major {
+  width: 16px;
+  height: 16px;
+  border-width: 3px;
+}
 .event-dot.selected, .event-dot:focus-visible {
   outline: 2px solid var(--gold);
   outline-offset: 3px;
@@ -238,8 +317,8 @@ button { cursor: pointer; }
 }
 .event-label.cn { color: var(--cinnabar); }
 .event-label.west { color: var(--indigo); }
-.event-label.shift-a.cn { top: 10%; }
-.event-label.shift-b.cn { top: 16%; }
+.event-label.shift-a.cn { top: 22%; }
+.event-label.shift-b.cn { top: 26%; }
 .event-label.shift-a.west { top: 78%; }
 .event-label.shift-b.west { top: 84%; }
 

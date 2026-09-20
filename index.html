@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>时光地图 · 中西对照</title>
-  <link rel="stylesheet" href="css/app.css?v=7" />
+  <link rel="stylesheet" href="css/app.css?v=8" />
 </head>
 <body data-mode="timeline">
   <header class="app-header">
@@ -28,14 +28,23 @@
   </header>
 
   <div class="toolbar" id="timeline-toolbar">
-    <div id="era-bar"></div>
-    <div class="zoom-wrap">
-      <span>远</span>
-      <input id="zoom" type="range" min="0.4" max="4" step="0.1" value="1.1" />
-      <span>近</span>
+    <div class="toolbar-row">
+      <span class="toolbar-label">分期</span>
+      <div id="era-bar"></div>
     </div>
-    <div class="search">
-      <input id="search" type="search" placeholder="搜事件、人物、发明…" />
+    <div class="toolbar-row">
+      <span class="toolbar-label">朝代</span>
+      <div id="dynasty-bar" class="dynasty-bar"></div>
+    </div>
+    <div class="toolbar-row tools">
+      <div class="zoom-wrap">
+        <span>远</span>
+        <input id="zoom" type="range" min="0.4" max="4" step="0.1" value="1.1" />
+        <span>近</span>
+      </div>
+      <div class="search">
+        <input id="search" type="search" placeholder="搜事件、人物、发明、朝代…" />
+      </div>
     </div>
   </div>
 
@@ -44,7 +53,7 @@
       <div class="stage" id="stage"></div>
     </div>
     <aside class="side-panel empty" id="detail">
-      点时间线上的圆点，看这一年的故事。上面是中国，下面是西方，同一条竖线就是同一年。
+      点上方红色朝代带或圆点。朝代是骨架，空心粗圈是大事件，实心圆是你自己加的。同一条竖线就是同一年。
     </aside>
   </div>
 
@@ -53,7 +62,7 @@
 
   <div class="modal-backdrop hidden" id="modal"></div>
 
-  <script src="js/data.js?v=5"></script>
-  <script src="js/app.js?v=5"></script>
+  <script src="js/data.js?v=8"></script>
+  <script src="js/app.js?v=8"></script>
 </body>
 </html>

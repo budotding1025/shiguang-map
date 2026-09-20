@@ -10,6 +10,7 @@
   const detail = $("detail");
   const modal = $("modal");
   const eraBar = $("era-bar");
+  const dynastyBar = $("dynasty-bar");
   const zoomInput = $("zoom");
   const searchInput = $("search");
 
@@ -17,6 +18,7 @@
     mode: "timeline",
     pxPerYear: 1.1,
     selectedId: null,
+    selectedDynastyId: null,
     query: "",
     era: null,
     showHelpOnce: false
@@ -76,8 +78,37 @@
 
   function matchesQuery(ev, q) {
     if (!q) return true;
-    const blob = [ev.title, ev.summary, ev.why, (ev.tags || []).join(" ")].join(" ").toLowerCase();
+    const dynasty = dynastyAt(ev.year);
+    const blob = [
+      ev.title,
+      ev.summary,
+      ev.why,
+      (ev.tags || []).join(" "),
+      dynasty ? dynasty.label : ""
+    ].join(" ").toLowerCase();
     return blob.indexOf(q) !== -1;
+  }
+
+  function dynastyAt(year) {
+    const list = DATA.dynasties || [];
+    for (let i = 0; i < list.length; i++) {
+      const d = list[i];
+      if (year >= d.from && year <= d.to) return d;
+    }
+    return null;
+  }
+
+  function formatDynastySpan(d) {
+    if (!d) return "";
+    const a = formatYear(d.from, d.approx);
+    const b = formatYear(d.to, d.to >= YEAR_MAX ? false : d.approx);
+    return a + " — " + (d.to >= YEAR_MAX ? "今天" : b);
+  }
+
+  function eventsInDynasty(d) {
+    return allEvents()
+      .filter(function (ev) { return ev.side === "cn" && ev.year >= d.from && ev.year <= d.to; })
+      .sort(function (a, b) { return a.year - b.year; });
   }
 
   function renderEras() {
@@ -89,11 +120,73 @@
       btn.textContent = era.label;
       btn.addEventListener("click", function () {
         state.era = era.id;
+        state.selectedDynastyId = null;
         renderEras();
+        renderDynastyBar();
         scrollToYear((era.from + era.to) / 2);
       });
       eraBar.appendChild(btn);
     });
+  }
+
+  function renderDynastyBar() {
+    if (!dynastyBar) return;
+    dynastyBar.innerHTML = "";
+    (DATA.dynasties || []).forEach(function (d) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "dynasty-btn" + (state.selectedDynastyId === d.id ? " active" : "");
+      btn.textContent = d.label;
+      btn.title = formatDynastySpan(d);
+      btn.addEventListener("click", function () { selectDynasty(d.id); });
+      dynastyBar.appendChild(btn);
+    });
+  }
+
+  function selectDynasty(id) {
+    const d = (DATA.dynasties || []).find(function (x) { return x.id === id; });
+    if (!d) return;
+    state.selectedDynastyId = id;
+    state.selectedId = null;
+    renderDynastyBar();
+    renderTimeline();
+    renderDynastyDetail(d);
+    scrollToYear((d.from + Math.min(d.to, YEAR_MAX)) / 2);
+  }
+
+  function renderDynastyDetail(d) {
+    const list = eventsInDynasty(d);
+    let html = "";
+    html += '<p class="kicker">中国朝代骨架</p>';
+    html += "<h2>" + escapeHtml(d.label) + "</h2>";
+    html += '<div class="year-line">' + formatDynastySpan(d) + "</div>";
+    html += "<p>" + escapeHtml(d.blurb || "") + "</p>";
+    html += '<div class="compare-box"><h3>这一朝已有的大事件</h3>';
+    if (list.length) {
+      html += list.map(function (ev) {
+        return '<p><button class="btn ghost" data-jump="' + ev.id + '" type="button">' + escapeHtml(ev.title) + "</button> · " + formatYear(ev.year, ev.approx) + (ev.custom ? "（自己加的）" : "") + "</p>";
+      }).join("");
+    } else {
+      html += "<p class='diff'>这一朝还很空。读到故事，就点下面按钮钉上来。</p>";
+    }
+    html += "</div>";
+    html += '<div class="panel-actions">';
+    html += '<button class="btn cinnabar" id="add-in-dynasty" type="button">在「' + escapeHtml(d.label) + '」加时间点</button>';
+    html += "</div>";
+    detail.className = "side-panel";
+    detail.innerHTML = html;
+    detail.querySelectorAll("[data-jump]").forEach(function (btn) {
+      btn.addEventListener("click", function () { selectEvent(btn.getAttribute("data-jump")); });
+    });
+    const addBtn = $("add-in-dynasty");
+    if (addBtn) {
+      addBtn.addEventListener("click", function () {
+        openEventForm({
+          side: "cn",
+          year: Math.round((d.from + Math.min(d.to, 2020)) / 2)
+        });
+      });
+    }
   }
 
   function renderTimeline() {
@@ -114,6 +207,30 @@
       const span = document.createElement("span");
       span.textContent = era.label;
       band.appendChild(span);
+      stage.appendChild(band);
+    });
+
+    (DATA.dynasties || []).forEach(function (d, i) {
+      const left = yearToX(d.from);
+      const width = Math.max(18, yearToX(Math.min(d.to, YEAR_MAX)) - left);
+      const band = document.createElement("button");
+      band.type = "button";
+      band.className = "dynasty-band" + (i % 2 ? " alt" : "") + (state.selectedDynastyId === d.id ? " selected" : "");
+      band.style.left = left + "px";
+      band.style.width = width + "px";
+      band.title = d.label + " · " + formatDynastySpan(d);
+      band.setAttribute("aria-label", "朝代 " + d.label);
+      const name = document.createElement("span");
+      name.textContent = width < 36 ? d.label.slice(0, 1) : d.label;
+      band.appendChild(name);
+      if (width >= 90) {
+        const years = document.createElement("span");
+        years.className = "dynasty-years";
+        years.textContent = d.approx ? "约" : "";
+        years.textContent += (d.from < 0 ? "前" + Math.abs(d.from) : d.from) + "–" + (d.to >= YEAR_MAX ? "今" : (d.to < 0 ? "前" + Math.abs(d.to) : d.to));
+        band.appendChild(years);
+      }
+      band.addEventListener("click", function () { selectDynasty(d.id); });
       stage.appendChild(band);
     });
 
@@ -148,15 +265,19 @@
       const x = yearToX(ev.year);
       const dot = document.createElement("button");
       dot.type = "button";
-      dot.className = "event-dot " + ev.side + (ev.custom ? " custom" : "") + (state.selectedId === ev.id ? " selected" : "");
+      dot.className = "event-dot " + ev.side
+        + (ev.custom ? " custom" : "")
+        + (ev.major ? " major" : "")
+        + (state.selectedId === ev.id ? " selected" : "");
       dot.style.left = x + "px";
-      dot.title = formatYear(ev.year, ev.approx) + " " + ev.title;
+      const dyn = ev.side === "cn" ? dynastyAt(ev.year) : null;
+      dot.title = (dyn ? dyn.label + " · " : "") + formatYear(ev.year, ev.approx) + " " + ev.title;
       dot.setAttribute("aria-label", ev.title);
       dot.addEventListener("click", function () { selectEvent(ev.id); });
       stage.appendChild(dot);
 
       const farEnough = x - lastLabelX[ev.side] > 136;
-      if (state.pxPerYear >= 0.85 && (farEnough || state.selectedId === ev.id)) {
+      if (state.pxPerYear >= 0.85 && (farEnough || state.selectedId === ev.id || ev.major)) {
         const lab = document.createElement("div");
         const shift = (labelCount[ev.side] % 2 === 0) ? "shift-a" : "shift-b";
         lab.className = "event-label " + ev.side + " " + shift;
@@ -173,7 +294,7 @@
       pin.type = "button";
       pin.className = "note-pin";
       pin.style.left = yearToX(note.year) + "px";
-      pin.style.top = note.side === "west" ? "56%" : "8%";
+      pin.style.top = note.side === "west" ? "56%" : "24%";
       pin.title = "笔记 · " + note.book;
       pin.addEventListener("click", function () {
         state.mode = "notes";
@@ -184,7 +305,7 @@
 
     const legend = document.createElement("div");
     legend.className = "legend";
-    legend.innerHTML = '<span><i class="swatch" style="background:#9c2b1d"></i>实心圆是你加的</span><span><i class="swatch" style="background:#a67c32;border-radius:1px"></i>菱形是读书笔记</span>';
+    legend.innerHTML = '<span>上方红带=中国朝代</span><span><i class="swatch" style="background:transparent;border:2px solid #9c2b1d;box-sizing:border-box"></i>粗圈=朝代大事件</span><span><i class="swatch" style="background:#9c2b1d"></i>实心=你加的</span><span><i class="swatch" style="background:#a67c32;border-radius:1px"></i>菱形=读书笔记</span>';
     scroller.appendChild(legend);
     Array.from(scroller.querySelectorAll(".legend")).slice(0, -1).forEach(function (n) { n.remove(); });
   }
@@ -207,6 +328,8 @@
 
   function selectEvent(id, shouldScroll) {
     state.selectedId = id;
+    state.selectedDynastyId = null;
+    renderDynastyBar();
     const ev = eventById(id);
     if (!ev) return;
     if (shouldScroll !== false) {
@@ -221,14 +344,21 @@
     const otherName = ev.side === "cn" ? "西方" : "中国";
     const near = contemporaries(ev);
     const pairs = pairsFor(ev);
+    const dyn = ev.side === "cn" ? dynastyAt(ev.year) : null;
     const notes = allNotes().filter(function (n) {
       return n.eventId === ev.id || (Math.abs(n.year - ev.year) <= 15 && (!n.side || n.side === ev.side || n.side === "both"));
     });
 
     let html = "";
-    html += '<p class="kicker">' + (ev.side === "cn" ? "中国" : "西方") + (ev.custom ? " · 自己添加" : "") + "</p>";
+    html += '<p class="kicker">' + (ev.side === "cn" ? "中国" : "西方")
+      + (ev.major ? " · 朝代大事件" : "")
+      + (ev.custom ? " · 自己添加" : "") + "</p>";
     html += "<h2>" + escapeHtml(ev.title) + "</h2>";
-    html += '<div class="year-line">' + formatYear(ev.year, ev.approx) + "</div>";
+    html += '<div class="year-line">' + formatYear(ev.year, ev.approx)
+      + (dyn ? " · " + escapeHtml(dyn.label) : "") + "</div>";
+    if (dyn) {
+      html += '<p class="diff">落在「' + escapeHtml(dyn.label) + '」色带里（' + formatDynastySpan(dyn) + "）。你可以继续在这一朝加自己的时间点。</p>";
+    }
     html += "<p>" + escapeHtml(ev.summary) + "</p>";
     if (ev.why) html += "<p>" + escapeHtml(ev.why) + "</p>";
     if (ev.tags && ev.tags.length) {
@@ -272,6 +402,9 @@
 
     html += '<div class="panel-actions">';
     html += '<button class="btn indigo" id="note-here" type="button">把书钉在这一年</button>';
+    if (dyn) {
+      html += '<button class="btn ghost" id="see-dynasty" type="button">看「' + escapeHtml(dyn.label) + '」整朝</button>';
+    }
     if (ev.custom) html += '<button class="btn ghost" id="remove-event" type="button">删除这个事件</button>';
     html += "</div>";
 
@@ -282,6 +415,8 @@
     });
     const noteHere = $("note-here");
     if (noteHere) noteHere.addEventListener("click", function () { openNoteForm(ev); });
+    const seeDynasty = $("see-dynasty");
+    if (seeDynasty && dyn) seeDynasty.addEventListener("click", function () { selectDynasty(dyn.id); });
     const removeBtn = $("remove-event");
     if (removeBtn) {
       removeBtn.addEventListener("click", function () {
@@ -382,17 +517,45 @@
     return era === "bce" ? -n : n === 0 ? 1 : n;
   }
 
-  function openEventForm() {
+  function openEventForm(preset) {
+    preset = preset || {};
+    const presetYear = preset.year;
+    const eraVal = presetYear != null && presetYear < 0 ? "bce" : "ce";
+    const yearVal = presetYear != null ? Math.abs(presetYear) : "";
+    const sideVal = preset.side || "cn";
+    const hintDyn = presetYear != null ? dynastyAt(presetYear) : null;
     openModal(
       "<h2>添加一个时间点</h2>" +
-      '<p class="hint">书里、纪录片里看到的事，都可以钉上来。年份大概对就行。</p>' +
+      '<p class="hint">书里、纪录片里看到的事，都可以钉到对应朝代上。年份大概对就行。</p>' +
       '<div class="form-row"><label>发生在哪一边</label><select id="f-side"><option value="cn">中国</option><option value="west">西方</option></select></div>' +
       '<div class="form-row"><label>年份</label><div class="era-row"><select id="f-era"><option value="bce">公元前</option><option value="ce" selected>公元</option></select><input id="f-year" type="number" min="1" max="2026" placeholder="比如 1405" /></div></div>' +
+      '<p class="hint" id="f-dynasty-hint">' + (hintDyn ? "大概落在「" + escapeHtml(hintDyn.label) + "」" : "填年份后，会提示落在哪一朝") + "</p>" +
       '<div class="form-row"><label>标题（一句话）</label><input id="f-title" maxlength="40" placeholder="比如：郑和到达古里" /></div>' +
       '<div class="form-row"><label>发生了什么</label><textarea id="f-summary" placeholder="用自己的话写几句"></textarea></div>' +
       '<div class="form-row"><label>为什么有趣（选填）</label><textarea id="f-why"></textarea></div>' +
       '<div class="header-actions"><button class="btn primary" id="f-save" type="button">钉上时间线</button><button class="btn ghost" id="f-cancel" type="button">取消</button></div>'
     );
+    $("f-side").value = sideVal;
+    $("f-era").value = eraVal;
+    if (yearVal !== "") $("f-year").value = yearVal;
+    function refreshDynastyHint() {
+      const y = parseYear($("f-era").value, $("f-year").value);
+      const hint = $("f-dynasty-hint");
+      if (!hint) return;
+      if ($("f-side").value !== "cn") {
+        hint.textContent = "西方一侧没有朝代色带，按年份钉即可。";
+        return;
+      }
+      if (y == null) {
+        hint.textContent = "填年份后，会提示落在哪一朝";
+        return;
+      }
+      const d = dynastyAt(y);
+      hint.textContent = d ? ("大概落在「" + d.label + "」（" + formatDynastySpan(d) + "）") : "这个年份不在已画的朝代色带里，仍然可以钉上。";
+    }
+    $("f-era").addEventListener("change", refreshDynastyHint);
+    $("f-year").addEventListener("input", refreshDynastyHint);
+    $("f-side").addEventListener("change", refreshDynastyHint);
     $("f-cancel").addEventListener("click", closeModal);
     $("f-save").addEventListener("click", function () {
       const year = parseYear($("f-era").value, $("f-year").value);
@@ -406,6 +569,7 @@
         alert("请写一个标题。");
         return;
       }
+      const d = $("f-side").value === "cn" ? dynastyAt(year) : null;
       const ev = {
         id: "custom-" + Date.now(),
         year: year,
@@ -413,7 +577,7 @@
         title: title,
         summary: summary || title,
         why: ($("f-why").value || "").trim(),
-        tags: ["自己添加"],
+        tags: ["自己添加"].concat(d ? [d.label] : []),
         custom: true
       };
       const store = loadStore();
@@ -473,11 +637,10 @@
   function openHelp() {
     openModal(
       '<div class="help"><h2>怎样用这张时光地图</h2>' +
-      "<p>上面一条是中国，下面一条是西方。时间从左到右流过。同一条竖线，就是同一年。</p>" +
-      "<p>实心圆点是你自己加的事件；金色小菱形是读书笔记。</p>" +
+      "<p>上面一条是中国，下面一条是西方。中国上方的红色色带是朝代骨架：夏商西周……一直到今天。粗圈是朝代大事件，实心圆是你自己加的，金色菱形是读书笔记。</p>" +
+      "<p>点朝代色带或顶部「朝代」按钮，可以看这一朝已有哪些事，再往里加自己的时间点。</p>" +
       "<p>对照卡片专门看「相同」和「不同」。有的是同一时期发生的，有的是同类事情、时间并不相同——地图会标明。</p>" +
-      "<p>在 Mac 上：把整个文件夹拷过去，用 Safari 打开 index.html。也可以双击「打开时光地图.command」。</p>" +
-      "<p>笔记存在这台电脑的浏览器里。换电脑或重装系统前，请先点「导出」，把备份文件收好，再在新电脑上「导入」。</p>" +
+      "<p>在线版：https://budotding1025.github.io/shiguang-map/ 。笔记存在这台电脑的浏览器里，换设备前请先「导出」。</p>" +
       '<button class="btn primary" id="help-ok" type="button">知道了</button></div>'
     );
     $("help-ok").addEventListener("click", function () {
@@ -575,6 +738,7 @@
   });
 
   renderEras();
+  renderDynastyBar();
   syncMode();
   scrollToYear(-100);
   if (!loadStore().seenHelp) {

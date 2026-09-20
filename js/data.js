@@ -11,6 +11,26 @@ window.TIMELINE_DATA = {
     { id: "voyage", label: "大航海", from: 1400, to: 1750 },
     { id: "modern", label: "近现代", from: 1750, to: 2026 }
   ],
+  /** 中国朝代色带：骨架层，孩子再往各朝里钉自己的时间点 */
+  dynasties: [
+    { id: "xia", label: "夏", from: -2070, to: -1600, approx: true, blurb: "课本里最早的朝代，故事多，考古还在慢慢对证。" },
+    { id: "shang", label: "商", from: -1600, to: -1046, approx: true, blurb: "甲骨文出现，中国有了可查的系统文字。" },
+    { id: "western-zhou", label: "西周", from: -1046, to: -771, blurb: "分封诸侯，礼乐成为重要传统。" },
+    { id: "eastern-zhou", label: "春秋战国", from: -770, to: -221, blurb: "诸侯争霸，诸子百家在这里长大。" },
+    { id: "qin", label: "秦", from: -221, to: -207, blurb: "第一次统一文字、度量衡，时间很短。" },
+    { id: "han", label: "汉", from: -206, to: 220, blurb: "西汉、东汉合称汉。丝绸之路从这里通向远方。" },
+    { id: "three-kingdoms", label: "三国", from: 220, to: 280, blurb: "魏蜀吴鼎立，故事后来讲了一千多年。" },
+    { id: "jin-nanbei", label: "魏晋南北朝", from: 280, to: 580, blurb: "长期分裂，民族与文化也在融合。" },
+    { id: "sui", label: "隋", from: 581, to: 618, blurb: "重新统一，开凿大运河。" },
+    { id: "tang", label: "唐", from: 618, to: 907, blurb: "长安是世界都会，诗与开放很盛。" },
+    { id: "five-dynasties", label: "五代十国", from: 907, to: 960, blurb: "唐之后短暂的分裂过渡。" },
+    { id: "song", label: "宋", from: 960, to: 1279, blurb: "北宋、南宋。市井热闹，印刷与纸币很重要。" },
+    { id: "yuan", label: "元", from: 1279, to: 1368, blurb: "跨欧亚的大帝国，驿站很远。" },
+    { id: "ming", label: "明", from: 1368, to: 1644, blurb: "郑和出海，紫禁城落成。" },
+    { id: "qing", label: "清", from: 1644, to: 1911, blurb: "最后一个帝制王朝，后来被迫打开国门。" },
+    { id: "roc", label: "中华民国", from: 1912, to: 1949, blurb: "帝制结束，中国寻找新的国家形式。" },
+    { id: "prc", label: "中华人民共和国", from: 1949, to: 2026, blurb: "当代中国的起点，改革开放打开新窗。" }
+  ],
   events: [
     {
       id: "pyramids",
@@ -30,6 +50,7 @@ window.TIMELINE_DATA = {
       side: "cn",
       era: "dawn",
       title: "商朝与甲骨文",
+      major: true,
       summary: "把问题刻在龟甲上，问天地，也留下中国最早的系统文字。",
       why: "文字让记忆可以跨过一代又一代，不再只靠嘴巴传。",
       tags: ["文字", "商"]
@@ -51,6 +72,7 @@ window.TIMELINE_DATA = {
       side: "cn",
       era: "dawn",
       title: "周朝建立",
+      major: true,
       summary: "周天子把土地分给亲戚和功臣，大家各管一块。",
       why: "这是中国早期的国家管理方式，也留下「礼」的传统。",
       tags: ["制度", "周"]
@@ -92,6 +114,7 @@ window.TIMELINE_DATA = {
       side: "cn",
       era: "empire",
       title: "秦统一六国",
+      major: true,
       summary: "车同轨、书同文：度量衡和文字被统一到一套标准。",
       why: "很大的土地要靠统一的规矩才能转起来。这也是「中国」作为一个整体更清晰的时刻。",
       tags: ["帝国", "制度"]
@@ -165,6 +188,7 @@ window.TIMELINE_DATA = {
       side: "cn",
       era: "empire",
       title: "三国开始",
+      major: true,
       summary: "一个大一统的帝国裂开，英雄故事从此讲了一千多年。",
       why: "分裂时期往往也是思想、宗教和民族大融合的时期。",
       tags: ["分裂"]
@@ -281,6 +305,7 @@ window.TIMELINE_DATA = {
       side: "cn",
       era: "medieval",
       title: "元朝：跨欧亚的帝国",
+      major: true,
       summary: "蒙古人的马蹄把东西方的路重新踩宽，驿站可以传很远的信。",
       why: "暴力扩张和交流常常缠在一起。路宽了，商品、技术和灾难都会走得更快。",
       tags: ["帝国", "交流"]
@@ -414,6 +439,7 @@ window.TIMELINE_DATA = {
       side: "cn",
       era: "modern",
       title: "中华人民共和国成立",
+      major: true,
       summary: "中国重新成为一个独立自主、面向现代化的国家。",
       why: "这是当代中国所有故事的起点之一，也是读今天新闻时的背景。",
       tags: ["当代"]
@@ -447,6 +473,150 @@ window.TIMELINE_DATA = {
       summary: "网页让普通人也能发布和查找信息，世界缩成一块屏幕。",
       why: "信息再次变得便宜。和造纸、印刷一样，载体变了，学习的方式也会变。",
       tags: ["发明", "当代"]
+    },
+    {
+      id: "xia-legend",
+      year: -2070,
+      approx: true,
+      side: "cn",
+      era: "dawn",
+      major: true,
+      title: "夏朝（传说）",
+      summary: "课本里最早的朝代。大禹治水、传位给儿子的故事从这里开始。",
+      why: "它是朝代骨架的第一格。考古还在慢慢对证，所以先标「约」。",
+      tags: ["朝代", "夏"]
+    },
+    {
+      id: "spring-autumn",
+      year: -770,
+      side: "cn",
+      era: "axis",
+      major: true,
+      title: "春秋开始",
+      summary: "周王室衰落，诸侯并起，史书进入「春秋」时代。",
+      why: "乱世逼人思考，诸子百家的土壤就是从这里长出来的。",
+      tags: ["朝代", "春秋"]
+    },
+    {
+      id: "han-found",
+      year: -202,
+      side: "cn",
+      era: "empire",
+      major: true,
+      title: "西汉建立",
+      summary: "刘邦称帝，汉朝开始。后来「汉人」这个称呼也和它有关。",
+      why: "秦很短，汉很长。很多制度、地名、民族称呼都在汉朝定了型。",
+      tags: ["朝代", "汉"]
+    },
+    {
+      id: "eastern-han",
+      year: 25,
+      side: "cn",
+      era: "empire",
+      major: true,
+      title: "东汉开始",
+      summary: "刘秀重建汉朝，都城在洛阳。",
+      why: "同一个「汉」字，中间隔了一段分裂。地图上仍画在汉的色带里。",
+      tags: ["朝代", "汉"]
+    },
+    {
+      id: "jin-unify",
+      year: 280,
+      side: "cn",
+      era: "empire",
+      major: true,
+      title: "西晋短暂统一",
+      summary: "三国之后，晋朝曾短暂把全国合在一起。",
+      why: "统一很短，随后又进入更长的南北分裂。",
+      tags: ["朝代", "晋"]
+    },
+    {
+      id: "sui-unify",
+      year: 589,
+      side: "cn",
+      era: "medieval",
+      major: true,
+      title: "隋统一南北",
+      summary: "结束长期南北对峙，中国再次成为一个整体。",
+      why: "大运河就是在这个统一的背景下开凿的。",
+      tags: ["朝代", "隋"]
+    },
+    {
+      id: "tang-found",
+      year: 618,
+      side: "cn",
+      era: "medieval",
+      major: true,
+      title: "唐朝建立",
+      summary: "李渊建唐，后来迎来贞观、开元的盛景。",
+      why: "唐是朝代骨架里特别亮的一格，诗、长安、遣唐使都挂在这里。",
+      tags: ["朝代", "唐"]
+    },
+    {
+      id: "an-lushan",
+      year: 755,
+      side: "cn",
+      era: "medieval",
+      major: true,
+      title: "安史之乱",
+      summary: "一场大战让盛唐转向衰落，北方许多人南迁。",
+      why: "一个朝代不只是「建立」和「灭亡」，中间的转折同样重要。",
+      tags: ["转折", "唐"]
+    },
+    {
+      id: "song-found",
+      year: 960,
+      side: "cn",
+      era: "medieval",
+      major: true,
+      title: "北宋建立",
+      summary: "赵匡胤陈桥兵变，宋朝开始，文官与市井逐渐兴盛。",
+      why: "宋的色带很长：先北宋，后南宋，印刷和纸币都在这里。",
+      tags: ["朝代", "宋"]
+    },
+    {
+      id: "jingkang",
+      year: 1127,
+      side: "cn",
+      era: "medieval",
+      major: true,
+      title: "靖康之变 · 南宋开始",
+      summary: "北宋灭亡，朝廷南迁，开始南宋。",
+      why: "同一个「宋」，地图上仍是一条色带，但都城和生活中心已经南移。",
+      tags: ["转折", "宋"]
+    },
+    {
+      id: "ming-found",
+      year: 1368,
+      side: "cn",
+      era: "voyage",
+      major: true,
+      title: "明朝建立",
+      summary: "朱元璋建立明朝，定都应天（南京），后来迁都北京。",
+      why: "紫禁城、郑和出海，都挂在明这一格。",
+      tags: ["朝代", "明"]
+    },
+    {
+      id: "qing-enter",
+      year: 1644,
+      side: "cn",
+      era: "voyage",
+      major: true,
+      title: "清军入关",
+      summary: "明朝结束，清朝成为最后一个帝制王朝。",
+      why: "后面的鸦片战争、辛亥革命，都发生在清的色带里。",
+      tags: ["朝代", "清"]
+    },
+    {
+      id: "roc-found",
+      year: 1912,
+      side: "cn",
+      era: "modern",
+      major: true,
+      title: "中华民国建立",
+      summary: "辛亥革命后的第二年，共和制国家正式建立。",
+      why: "帝制结束后的新起点，和旁边的「辛亥革命」可以一起看。",
+      tags: ["朝代", "民国"]
     }
   ],
   pairs: [
