@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>时光地图 · 中西对照</title>
-  <link rel="stylesheet" href="css/app.css?v=9" />
+  <link rel="stylesheet" href="css/app.css?v=10" />
 </head>
 <body data-mode="timeline">
   <header class="app-header">
@@ -20,12 +20,15 @@
       </div>
       <button class="btn cinnabar" id="btn-add-event" type="button">添加事件</button>
       <button class="btn indigo" id="btn-add-note" type="button">夹一页笔记</button>
+      <button class="btn ghost" id="btn-music" type="button" aria-pressed="false" title="背景音乐默认关闭">音乐：关</button>
       <button class="btn ghost" id="btn-export" type="button">导出</button>
       <button class="btn ghost" id="btn-import" type="button">导入</button>
       <button class="btn ghost" id="btn-help" type="button">怎样用</button>
       <input id="import-file" type="file" accept="application/json,.json" class="hidden" />
     </div>
   </header>
+
+  <audio id="bg-music" src="audio/chinese-relaxing.mp3" loop preload="none"></audio>
 
   <div class="toolbar" id="timeline-toolbar">
     <div class="toolbar-row">
@@ -61,8 +64,13 @@
   <section class="notes-view" id="view-notes"></section>
 
   <div class="modal-backdrop hidden" id="modal"></div>
+  <p class="music-credit">
+    背景音乐：
+    <a href="https://pixabay.com/music/world-chinese-relaxing-asian-meditation-traditional-music-285376/" target="_blank" rel="noopener">Chinese Relaxing – Asian Meditation</a>
+    · Villatic_Music · Pixabay
+  </p>
 
-  <script src="js/data.js?v=9"></script>
-  <script src="js/app.js?v=9"></script>
+  <script src="js/data.js?v=10"></script>
+  <script src="js/app.js?v=10"></script>
 </body>
 </html>

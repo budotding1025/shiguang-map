@@ -479,7 +479,24 @@ button { cursor: pointer; }
 
 .help p { line-height: 1.7; margin: 0 0 10px; font-size: 14px; }
 
-.hidden { display: none !important; }
+.btn.music-on {
+  border-color: var(--gold);
+  color: var(--gold);
+  background: rgba(166, 124, 50, 0.1);
+}
+.music-credit {
+  position: fixed;
+  left: 12px;
+  bottom: 10px;
+  z-index: 8;
+  font-size: 11px;
+  color: var(--ink-soft);
+  background: rgba(241, 230, 208, 0.9);
+  padding: 4px 8px;
+  border: 1px solid var(--rule);
+  max-width: min(420px, 70vw);
+}
+.music-credit a { color: var(--indigo); }
 
 body[data-mode="pairs"] #view-timeline,
 body[data-mode="pairs"] #timeline-toolbar,

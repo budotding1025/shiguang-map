@@ -38,10 +38,58 @@
       customEvents: prev.customEvents || [],
       notes: prev.notes || [],
       seenHelp: prev.seenHelp || false,
+      musicOn: !!prev.musicOn,
       ...partial
     };
     localStorage.setItem(STORE_KEY, JSON.stringify(next));
     return next;
+  }
+
+  const bgMusic = $("bg-music");
+  const musicBtn = $("btn-music");
+
+  function syncMusicButton(on) {
+    if (!musicBtn) return;
+    musicBtn.textContent = on ? "音乐：开" : "音乐：关";
+    musicBtn.setAttribute("aria-pressed", on ? "true" : "false");
+    musicBtn.title = on ? "点击关闭背景音乐" : "点击开启背景音乐";
+    musicBtn.classList.toggle("music-on", !!on);
+  }
+
+  function setMusicOn(on) {
+    if (!bgMusic) return;
+    bgMusic.loop = true;
+    bgMusic.volume = 0.28;
+    syncMusicButton(on);
+    saveStore({ musicOn: !!on });
+    if (on) {
+      const play = bgMusic.play();
+      if (play && play.catch) {
+        play.catch(function () {
+          syncMusicButton(false);
+          saveStore({ musicOn: false });
+        });
+      }
+    } else {
+      bgMusic.pause();
+    }
+  }
+
+  function initMusic() {
+    if (!bgMusic || !musicBtn) return;
+    const wantOn = !!loadStore().musicOn;
+    syncMusicButton(wantOn);
+    if (wantOn) {
+      const resume = function () {
+        setMusicOn(true);
+        document.removeEventListener("pointerdown", resume);
+      };
+      document.addEventListener("pointerdown", resume, { once: true });
+    }
+    musicBtn.addEventListener("click", function () {
+      const turningOn = bgMusic.paused;
+      setMusicOn(turningOn);
+    });
   }
 
   function allEvents() {
@@ -641,6 +689,7 @@
       "<p>点朝代色带或顶部「朝代」按钮，可以看这一朝已有哪些事，再往里加自己的时间点。</p>" +
       "<p>在时间线上滚动鼠标滚轮：向上放大、向下缩小（对准鼠标位置缩放）。按住 Shift 再滚，或左右滑动触控板，可以左右移动时间轴。</p>" +
       "<p>对照卡片专门看「相同」和「不同」。有的是同一时期发生的，有的是同类事情、时间并不相同——地图会标明。</p>" +
+      "<p>右上角「音乐：开/关」可播放背景曲 <em>Chinese Relaxing – Asian Meditation</em>（Pixabay / Villatic_Music，默认关闭）。</p>" +
       "<p>在线版：https://budotding1025.github.io/shiguang-map/ 。笔记存在这台电脑的浏览器里，换设备前请先「导出」。</p>" +
       '<button class="btn primary" id="help-ok" type="button">知道了</button></div>'
     );
@@ -761,6 +810,7 @@
   renderEras();
   renderDynastyBar();
   syncMode();
+  initMusic();
   scrollToYear(-100);
   if (!loadStore().seenHelp) {
     state.showHelpOnce = true;
