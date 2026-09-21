@@ -498,6 +498,8 @@ button { cursor: pointer; }
 }
 .music-credit a { color: var(--indigo); }
 
+.hidden { display: none !important; }
+
 body[data-mode="pairs"] #view-timeline,
 body[data-mode="pairs"] #timeline-toolbar,
 body[data-mode="notes"] #view-timeline,
