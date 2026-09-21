@@ -403,6 +403,16 @@
       + (ev.major ? " · 朝代大事件" : "")
       + (ev.custom && ev.kind !== "person" ? " · 自己添加" : "") + "</p>";
     html += "<h2>" + escapeHtml(ev.title) + "</h2>";
+    if (ev.portrait && isSafeImage(ev.portrait.thumb)) {
+      html += '<figure class="portrait"><img src="' + escapeHtml(ev.portrait.thumb) + '" alt="' + escapeHtml(ev.title) + ' 的画像" />';
+      html += "<figcaption>画像来自维基共享资源";
+      if (ev.portrait.license) html += " · " + escapeHtml(ev.portrait.license);
+      if (ev.portrait.credit) html += " · " + escapeHtml(ev.portrait.credit);
+      if (isCommonsFilePage(ev.portrait.page)) {
+        html += ' · <a href="' + escapeHtml(ev.portrait.page) + '" target="_blank" rel="noopener">查看出处</a>';
+      }
+      html += "</figcaption></figure>";
+    }
     html += '<div class="year-line">' + formatYear(ev.year, ev.approx)
       + (dyn ? " · " + escapeHtml(dyn.label) : "") + "</div>";
     if (dyn) {
@@ -688,6 +698,174 @@
     });
   }
 
+  function isSafeImage(url) {
+    return /^https:\/\/(upload\.wikimedia\.org|thumb\.wikimedia\.org|commons\.wikimedia\.org)\//.test(String(url || ""));
+  }
+
+  function isCommonsFilePage(url) {
+    return /^https:\/\/commons\.wikimedia\.org\/wiki\/File:/.test(String(url || ""));
+  }
+
+  function plainMeta(html) {
+    return String(html || "").replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/\s+/g, " ").trim();
+  }
+
+  function licenseLabel(shortName) {
+    const text = plainMeta(shortName);
+    if (!text) return "许可未标明";
+    if (/public domain|^pd\b|公有/i.test(text)) return "公有领域";
+    return text;
+  }
+
+  function commonsFilePage(title) {
+    const name = String(title || "").replace(/^File:/i, "").replace(/ /g, "_");
+    return "https://commons.wikimedia.org/wiki/File:" + encodeURIComponent(name);
+  }
+
+  function wikiGet(base, params) {
+    const query = Object.keys(params).map(function (key) {
+      return encodeURIComponent(key) + "=" + encodeURIComponent(params[key]);
+    }).join("&");
+    return fetch(base + "?" + query).then(function (res) {
+      if (!res.ok) throw new Error("wiki");
+      return res.json();
+    });
+  }
+
+  function claimEntityId(claim) {
+    try { return claim.mainsnak.datavalue.value.id || ""; } catch (e) { return ""; }
+  }
+
+  function claimText(claim) {
+    try {
+      const value = claim.mainsnak.datavalue.value;
+      return typeof value === "string" ? value : "";
+    } catch (e) { return ""; }
+  }
+
+  function entityText(entity, field) {
+    const bag = (entity && entity[field]) || {};
+    return (bag.zh && bag.zh.value) || (bag.en && bag.en.value) || "";
+  }
+
+  function pictureFromImageInfo(page, extra) {
+    const info = (page.imageinfo || [])[0] || {};
+    const mime = info.mime || "";
+    if (mime.indexOf("image/") !== 0 || mime === "image/svg+xml" || mime === "image/gif") return null;
+    const thumb = info.thumburl || "";
+    if (!isSafeImage(thumb)) return null;
+    const meta = info.extmetadata || {};
+    const title = page.title || extra.fileTitle || "";
+    const lowered = title.toLowerCase();
+    let score = extra.score || 0;
+    if (/像|画像|肖像|statue|portrait|painting/.test(lowered + title)) score += 2;
+    if (/tomb|墓地|墓碑|sign|plaque/.test(lowered)) score -= 2;
+    return {
+      thumb: thumb,
+      page: commonsFilePage(title),
+      license: licenseLabel((meta.LicenseShortName || {}).value),
+      credit: plainMeta((meta.Artist || {}).value).slice(0, 60),
+      fileTitle: title,
+      badge: extra.badge || "",
+      note: extra.note || "",
+      score: score
+    };
+  }
+
+  function searchPersonPictures(name) {
+    const wd = "https://www.wikidata.org/w/api.php";
+    const commons = "https://commons.wikimedia.org/w/api.php";
+    return wikiGet(wd, {
+      action: "wbsearchentities",
+      search: name,
+      language: "zh",
+      uselang: "zh",
+      type: "item",
+      limit: "5",
+      format: "json",
+      origin: "*"
+    }).then(function (found) {
+      const ids = (found.search || []).map(function (item) { return item.id; }).filter(Boolean);
+      const entitiesPromise = ids.length ? wikiGet(wd, {
+        action: "wbgetentities",
+        ids: ids.join("|"),
+        props: "claims|labels|descriptions",
+        languages: "zh|en",
+        format: "json",
+        origin: "*"
+      }) : Promise.resolve({ entities: {} });
+      const searchPromise = wikiGet(commons, {
+        action: "query",
+        generator: "search",
+        gsrsearch: name,
+        gsrnamespace: "6",
+        gsrlimit: "8",
+        prop: "imageinfo",
+        iiprop: "url|mime|extmetadata",
+        iiurlwidth: "240",
+        format: "json",
+        origin: "*"
+      }).catch(function () { return {}; });
+      return Promise.all([entitiesPromise, searchPromise]);
+    }).then(function (pair) {
+      const entities = (pair[0].entities || {});
+      const wanted = [];
+      Object.keys(entities).forEach(function (id) {
+        const entity = entities[id];
+        if (!entity || entity.missing != null) return;
+        const human = (entity.claims && entity.claims.P31 || []).some(function (claim) {
+          return claimEntityId(claim) === "Q5";
+        });
+        const files = (entity.claims && entity.claims.P18 || []).map(claimText).filter(Boolean);
+        if (!files.length) return;
+        const who = entityText(entity, "label");
+        const about = entityText(entity, "description");
+        files.slice(0, 1).forEach(function (file) {
+          wanted.push({
+            fileTitle: file.indexOf("File:") === 0 ? file : ("File:" + file),
+            badge: "百科选用",
+            note: [who, about].filter(Boolean).join(" · "),
+            score: human ? 8 : 5
+          });
+        });
+      });
+      const titles = wanted.map(function (item) { return item.fileTitle; });
+      const knownPromise = titles.length ? wikiGet(commons, {
+        action: "query",
+        titles: titles.join("|"),
+        prop: "imageinfo",
+        iiprop: "url|mime|extmetadata",
+        iiurlwidth: "240",
+        format: "json",
+        origin: "*"
+      }).catch(function () { return {}; }) : Promise.resolve({});
+      return knownPromise.then(function (known) {
+        const pictures = [];
+        const seen = {};
+        function pushPicture(page, extra) {
+          const picture = pictureFromImageInfo(page, extra || {});
+          if (!picture || seen[picture.page]) return;
+          seen[picture.page] = true;
+          pictures.push(picture);
+        }
+        const knownPages = ((known.query || {}).pages) || {};
+        Object.keys(knownPages).forEach(function (key) {
+          const page = knownPages[key];
+          const extra = wanted.filter(function (item) {
+            return item.fileTitle === page.title || item.fileTitle.replace(/ /g, "_") === String(page.title || "").replace(/ /g, "_");
+          })[0] || { score: 5, badge: "百科选用" };
+          pushPicture(page, extra);
+        });
+        const searched = ((pair[1].query || {}).pages) || {};
+        Object.keys(searched).forEach(function (key) {
+          pushPicture(searched[key], { score: 1, note: "共享资源里的图，请自己看是不是这个人" });
+        });
+        pictures.sort(function (a, b) { return b.score - a.score; });
+        return pictures.slice(0, 6);
+      });
+    });
+  }
+
   function openPersonForm() {
     openModal(
       "<h2>添加一个人物</h2>" +
@@ -701,10 +879,16 @@
       '<div class="draft-box" id="p-draft-box" hidden></div>' +
       '<div class="form-row"><label>用我自己的话写（必填，不要照抄草稿）</label><textarea id="p-own" placeholder="比如：他做了一台能感觉地震的仪器。"></textarea></div>' +
       '<div class="form-row"><label>我还想弄清的问题（选填）</label><textarea id="p-question" placeholder="比如：地动仪到底准不准？"></textarea></div>' +
+      '<div class="header-actions"><button class="btn indigo" id="p-pics" type="button">找一张可信的画像</button></div>' +
+      '<p class="hint">不搜全网图片。先在百科数据里确认是哪一位，再从维基共享资源选有许可说明的图。标着「百科选用」的优先。看不清是不是这个人，就先不选。</p>' +
+      '<p class="hint" id="p-pic-status"></p>' +
+      '<div class="pic-grid" id="p-pic-list"></div>' +
       '<div class="header-actions"><button class="btn primary" id="p-save" type="button">钉上时间线</button><button class="btn ghost" id="p-cancel" type="button">取消</button></div>'
     );
     let lastDraft = "";
     let lastDraftCore = "";
+    let pictureChoices = [];
+    let selectedPicture = null;
     function refreshDynastyHint() {
       const y = parseYear($("p-era").value, $("p-year").value);
       const hint = $("p-dynasty-hint");
@@ -724,6 +908,48 @@
     $("p-year").addEventListener("input", refreshDynastyHint);
     $("p-side").addEventListener("change", refreshDynastyHint);
     $("p-cancel").addEventListener("click", closeModal);
+    $("p-pics").addEventListener("click", function () {
+      const name = ($("p-name").value || "").trim();
+      if (!name) { alert("先写下人物姓名。"); return; }
+      const btn = $("p-pics");
+      btn.disabled = true;
+      selectedPicture = null;
+      pictureChoices = [];
+      $("p-pic-list").innerHTML = "";
+      $("p-pic-status").textContent = "正在百科图库里找，请稍等…";
+      searchPersonPictures(name).then(function (pictures) {
+        pictureChoices = pictures;
+        if (!pictures.length) {
+          $("p-pic-status").textContent = "图库里还没有合适的画像。可以先不选图，用自己的话把人物钉上。";
+          return;
+        }
+        $("p-pic-status").textContent = "点一张你确认过的。许可和出处会一起记下来。";
+        $("p-pic-list").innerHTML = pictures.map(function (picture, index) {
+          return '<button class="pic-card" type="button" data-pic="' + index + '">' +
+            '<img src="' + escapeHtml(picture.thumb) + '" alt="" />' +
+            '<span class="pic-meta">' +
+            (picture.badge ? '<span class="pic-badge">' + escapeHtml(picture.badge) + "</span> " : "") +
+            escapeHtml(picture.license) +
+            (picture.note ? "<br>" + escapeHtml(picture.note) : "") +
+            "</span></button>";
+        }).join("");
+      }).catch(function () {
+        $("p-pic-status").textContent = "图库暂时打不开。可以先不选图，用自己的话保存。";
+      }).then(function () {
+        btn.disabled = false;
+      });
+    });
+    $("p-pic-list").addEventListener("click", function (event) {
+      const card = event.target.closest("[data-pic]");
+      if (!card) return;
+      const picture = pictureChoices[Number(card.getAttribute("data-pic"))];
+      if (!picture) return;
+      selectedPicture = picture;
+      Array.prototype.forEach.call($("p-pic-list").children, function (node) {
+        node.classList.toggle("picked", node === card);
+      });
+      $("p-pic-status").textContent = "已选这张。钉上时间线时会带上出处。";
+    });
     $("p-draft").addEventListener("click", function () {
       const name = ($("p-name").value || "").trim();
       const year = parseYear($("p-era").value, $("p-year").value);
@@ -784,6 +1010,14 @@
         custom: true,
         kind: "person"
       };
+      if (selectedPicture && isSafeImage(selectedPicture.thumb) && isCommonsFilePage(selectedPicture.page)) {
+        ev.portrait = {
+          thumb: selectedPicture.thumb,
+          page: selectedPicture.page,
+          license: selectedPicture.license || "",
+          credit: selectedPicture.credit || ""
+        };
+      }
       const store = loadStore();
       store.customEvents = (store.customEvents || []).concat([ev]);
       saveStore(store);
@@ -846,7 +1080,7 @@
       "<p>上面一条是中国，下面一条是西方。中国上方的红色色带是朝代骨架：夏商西周……一直到今天。粗圈是朝代大事件，实心圆是你自己加的，金色菱形是读书笔记。</p>" +
       "<p>点朝代色带或顶部「朝代」按钮，可以看这一朝已有哪些事，再往里加自己的时间点。</p>" +
       "<p>在时间线上滚动鼠标滚轮：向上放大、向下缩小（对准鼠标位置缩放）。按住 Shift 再滚，或左右滑动触控板，可以左右移动时间轴。</p>" +
-      "<p>点「添加人物」：先请人工智能起一个很短的草稿，再用自己的话改写才能保存。草稿里会留一个你可以自己去查的问题。</p>" +
+      "<p>点「添加人物」：先请人工智能起一个很短的草稿，再用自己的话改写才能保存。草稿里会留一个你可以自己去查的问题。画像不搜全网，只从维基共享资源里选有出处的，可以不选。</p>" +
       "<p>对照卡片专门看「相同」和「不同」。有的是同一时期发生的，有的是同类事情、时间并不相同——地图会标明。</p>" +
       "<p>右上角「音乐：开/关」可播放背景曲 <em>Chinese Relaxing – Asian Meditation</em>（Pixabay / Villatic_Music，默认关闭）。</p>" +
       "<p>在线版：https://budotding1025.github.io/shiguang-map/ 。笔记存在这台电脑的浏览器里，换设备前请先「导出」。</p>" +
