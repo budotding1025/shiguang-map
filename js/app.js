@@ -202,6 +202,67 @@
     scrollToYear((d.from + Math.min(d.to, YEAR_MAX)) / 2);
   }
 
+  function docsForEvent(ev) {
+    const docs = DATA.documentaries || [];
+    if (!ev) return [];
+    const dyn = ev.side === "cn" ? dynastyAt(ev.year) : null;
+    const scored = [];
+    docs.forEach(function (doc) {
+      let score = 0;
+      if ((doc.eventIds || []).indexOf(ev.id) !== -1) score += 5;
+      if (dyn && (doc.dynastyIds || []).indexOf(dyn.id) !== -1) score += 3;
+      if (ev.era && (doc.eraIds || []).indexOf(ev.era) !== -1 && doc.side === ev.side) score += 1;
+      if (score > 0) scored.push({ doc: doc, score: score });
+    });
+    scored.sort(function (a, b) { return b.score - a.score; });
+    const seen = {};
+    const out = [];
+    scored.forEach(function (row) {
+      if (seen[row.doc.id]) return;
+      seen[row.doc.id] = true;
+      out.push(row.doc);
+    });
+    return out.slice(0, 4);
+  }
+
+  function docsForDynasty(d) {
+    return (DATA.documentaries || []).filter(function (doc) {
+      return (doc.dynastyIds || []).indexOf(d.id) !== -1;
+    }).slice(0, 5);
+  }
+
+  function docById(id) {
+    return (DATA.documentaries || []).find(function (doc) { return doc.id === id; }) || null;
+  }
+
+  function renderDocCards(docs) {
+    if (!docs || !docs.length) return "";
+    let html = '<div class="compare-box"><h3>可看的纪录片</h3>';
+    html += '<p class="hint" style="margin-top:0">只推荐片名和找片方式，不在这里播放。历史剧会单独标明。</p>';
+    docs.forEach(function (doc) {
+      const kindLabel = doc.kind === "drama" ? "历史剧" : "纪录片";
+      const pair = doc.pairWith ? docById(doc.pairWith) : null;
+      html += '<div class="doc-card">';
+      html += '<div class="kind">' + kindLabel
+        + (doc.side === "cn" ? " · 中国" : " · 西方")
+        + (doc.yearsHint ? " · " + escapeHtml(doc.yearsHint) : "")
+        + "</div>";
+      html += "<h4>" + escapeHtml(doc.title) + "</h4>";
+      html += "<p>" + escapeHtml(doc.blurb || "") + "</p>";
+      if (doc.ask) html += '<div class="q">看的时候想一想：' + escapeHtml(doc.ask) + "</div>";
+      if (pair) {
+        html += '<p class="same">同时期/对照可看：' + escapeHtml(pair.title) + "</p>";
+      }
+      html += '<p class="diff">怎么找：' + escapeHtml(doc.find || "请搜索片名") + "</p>";
+      if (doc.url && /^https:\/\//.test(doc.url)) {
+        html += '<p><a href="' + escapeHtml(doc.url) + '" target="_blank" rel="noopener">打开介绍页</a></p>';
+      }
+      html += "</div>";
+    });
+    html += "</div>";
+    return html;
+  }
+
   function renderDynastyDetail(d) {
     const list = eventsInDynasty(d);
     let html = "";
@@ -218,6 +279,7 @@
       html += "<p class='diff'>这一朝还很空。读到故事，就点下面按钮钉上来。</p>";
     }
     html += "</div>";
+    html += renderDocCards(docsForDynasty(d));
     html += '<div class="panel-actions">';
     html += '<button class="btn cinnabar" id="add-in-dynasty" type="button">在「' + escapeHtml(d.label) + '」加时间点</button>';
     html += "</div>";
@@ -458,6 +520,8 @@
       });
       html += "</div>";
     }
+
+    html += renderDocCards(docsForEvent(ev));
 
     html += '<div class="panel-actions">';
     html += '<button class="btn indigo" id="note-here" type="button">把书钉在这一年</button>';
@@ -1081,7 +1145,7 @@
       "<p>点朝代色带或顶部「朝代」按钮，可以看这一朝已有哪些事，再往里加自己的时间点。</p>" +
       "<p>在时间线上滚动鼠标滚轮：向上放大、向下缩小（对准鼠标位置缩放）。按住 Shift 再滚，或左右滑动触控板，可以左右移动时间轴。</p>" +
       "<p>点「添加人物」：先请人工智能起一个很短的草稿，再用自己的话改写才能保存。草稿里会留一个你可以自己去查的问题。画像不搜全网，只从维基共享资源里选有出处的，可以不选。</p>" +
-      "<p>对照卡片专门看「相同」和「不同」。有的是同一时期发生的，有的是同类事情、时间并不相同——地图会标明。</p>" +
+      "<p>点开事件或朝代，右侧会出现「可看的纪录片」：中国片与西方片尽量对照，只给片名和找法，不在网页里播。</p>" +
       "<p>右上角「音乐：开/关」可播放背景曲 <em>Chinese Relaxing – Asian Meditation</em>（Pixabay / Villatic_Music，默认关闭）。</p>" +
       "<p>在线版：https://budotding1025.github.io/shiguang-map/ 。笔记存在这台电脑的浏览器里，换设备前请先「导出」。</p>" +
       '<button class="btn primary" id="help-ok" type="button">知道了</button></div>'
