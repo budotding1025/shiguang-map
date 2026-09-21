@@ -761,7 +761,7 @@ window.TIMELINE_DATA = {
       blurb: "单集很短，一件文物讲一个小故事。四年级最容易从这里开始。",
       ask: "这件东西当时是给谁用的？放到今天会变成什么？",
       find: "央视纪录片或哔哩哔哩搜索「如果国宝会说话」",
-      url: "https://tv.cctv.com/"
+      url: "https://tv.cctv.com/2017/12/29/VIDAMZlRMuEdLK4MFt2vlhmC171229.shtml"
     },
     {
       id: "doc-hexi",
