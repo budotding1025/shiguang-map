@@ -611,12 +611,23 @@
 
     html += renderDocCards(docsForEvent(ev));
 
+    if (ev.custom) {
+      html += '<div class="compare-box verify-box">';
+      html += "<h3>如果写错了</h3>";
+      html += "<p>年份、名字或说法不对时，先去书、纪录片或百科里核对，再点「修改」。不要只靠记得的印象改。</p>";
+      if (ev.verified) html += '<p class="same">你标记过：已经核对过一次。看到新材料，还可以再改。</p>';
+      html += "</div>";
+    }
+
     html += '<div class="panel-actions">';
     html += '<button class="btn indigo" id="note-here" type="button">把书钉在这一年</button>';
     if (dyn) {
       html += '<button class="btn ghost" id="see-dynasty" type="button">看「' + escapeHtml(dyn.label) + '」整朝</button>';
     }
-    if (ev.custom) html += '<button class="btn ghost" id="remove-event" type="button">删除这个事件</button>';
+    if (ev.custom) {
+      html += '<button class="btn cinnabar" id="edit-event" type="button">修改</button>';
+      html += '<button class="btn ghost" id="remove-event" type="button">' + (ev.kind === "person" ? "删除这个人物" : "删除这个事件") + "</button>";
+    }
     html += "</div>";
 
     detail.className = "side-panel";
@@ -629,6 +640,13 @@
     if (noteHere) noteHere.addEventListener("click", function () { openNoteForm(ev); });
     const seeDynasty = $("see-dynasty");
     if (seeDynasty && dyn) seeDynasty.addEventListener("click", function () { selectDynasty(dyn.id); });
+    const editBtn = $("edit-event");
+    if (editBtn) {
+      editBtn.addEventListener("click", function () {
+        if (ev.kind === "person") openPersonForm(ev);
+        else openEventForm(ev);
+      });
+    }
     const removeBtn = $("remove-event");
     if (removeBtn) {
       removeBtn.addEventListener("click", function () {
@@ -729,27 +747,47 @@
     return era === "bce" ? -n : n === 0 ? 1 : n;
   }
 
+  function upsertCustomEvent(ev) {
+    const store = loadStore();
+    const list = (store.customEvents || []).slice();
+    const index = list.findIndex(function (item) { return item.id === ev.id; });
+    if (index >= 0) list[index] = ev;
+    else list.push(ev);
+    store.customEvents = list;
+    saveStore(store);
+  }
+
   function openEventForm(preset) {
     preset = preset || {};
+    const editing = preset.custom && preset.id ? preset : null;
     const presetYear = preset.year;
     const eraVal = presetYear != null && presetYear < 0 ? "bce" : "ce";
     const yearVal = presetYear != null ? Math.abs(presetYear) : "";
     const sideVal = preset.side || "cn";
     const hintDyn = presetYear != null ? dynastyAt(presetYear) : null;
     openModal(
-      "<h2>添加一个时间点</h2>" +
-      '<p class="hint">书里、纪录片里看到的事，都可以钉到对应朝代上。年份大概对就行。</p>' +
+      "<h2>" + (editing ? "修改这个时间点" : "添加一个时间点") + "</h2>" +
+      (editing
+        ? '<p class="hint">如果上次写错了，先去书、纪录片或百科里核对，再改这里。保存前要勾上「我已经核对过」。</p>'
+        : '<p class="hint">书里、纪录片里看到的事，都可以钉到对应朝代上。年份大概对就行。写错了以后还能改。</p>') +
       '<div class="form-row"><label>发生在哪一边</label><select id="f-side"><option value="cn">中国</option><option value="west">西方</option></select></div>' +
       '<div class="form-row"><label>年份</label><div class="era-row"><select id="f-era"><option value="bce">公元前</option><option value="ce" selected>公元</option></select><input id="f-year" type="number" min="1" max="2026" placeholder="比如 1405" /></div></div>' +
       '<p class="hint" id="f-dynasty-hint">' + (hintDyn ? "大概落在「" + escapeHtml(hintDyn.label) + "」" : "填年份后，会提示落在哪一朝") + "</p>" +
       '<div class="form-row"><label>标题（一句话）</label><input id="f-title" maxlength="40" placeholder="比如：郑和到达古里" /></div>' +
       '<div class="form-row"><label>发生了什么</label><textarea id="f-summary" placeholder="用自己的话写几句"></textarea></div>' +
       '<div class="form-row"><label>为什么有趣（选填）</label><textarea id="f-why"></textarea></div>' +
-      '<div class="header-actions"><button class="btn primary" id="f-save" type="button">钉上时间线</button><button class="btn ghost" id="f-cancel" type="button">取消</button></div>'
+      (editing ? '<label class="check-row"><input id="f-checked" type="checkbox" /> 我已经去书、纪录片或百科里核对过</label>' : "") +
+      '<div class="header-actions"><button class="btn primary" id="f-save" type="button">' + (editing ? "保存修改" : "钉上时间线") + '</button><button class="btn ghost" id="f-cancel" type="button">取消</button></div>'
     );
     $("f-side").value = sideVal;
     $("f-era").value = eraVal;
     if (yearVal !== "") $("f-year").value = yearVal;
+    if (editing) {
+      $("f-title").value = editing.title || "";
+      $("f-summary").value = editing.summary || "";
+      $("f-why").value = editing.why || "";
+      if (editing.verified) $("f-checked").checked = true;
+    }
     function refreshDynastyHint() {
       const y = parseYear($("f-era").value, $("f-year").value);
       const hint = $("f-dynasty-hint");
@@ -781,20 +819,23 @@
         alert("请写一个标题。");
         return;
       }
+      if (editing && !$("f-checked").checked) {
+        alert("先去书、纪录片或百科里核对，再勾上「我已经核对过」。");
+        return;
+      }
       const d = $("f-side").value === "cn" ? dynastyAt(year) : null;
       const ev = {
-        id: "custom-" + Date.now(),
+        id: editing ? editing.id : ("custom-" + Date.now()),
         year: year,
         side: $("f-side").value,
         title: title,
         summary: summary || title,
         why: ($("f-why").value || "").trim(),
         tags: ["自己添加"].concat(d ? [d.label] : []),
-        custom: true
+        custom: true,
+        verified: editing ? true : false
       };
-      const store = loadStore();
-      store.customEvents = (store.customEvents || []).concat([ev]);
-      saveStore(store);
+      upsertCustomEvent(ev);
       closeModal();
       state.mode = "timeline";
       syncMode();
@@ -1019,10 +1060,15 @@
     });
   }
 
-  function openPersonForm() {
+  function openPersonForm(existing) {
+    const editing = existing && existing.custom && existing.kind === "person" ? existing : null;
+    const eraVal = editing && editing.year < 0 ? "bce" : "ce";
+    const yearVal = editing ? Math.abs(editing.year) : "";
     openModal(
-      "<h2>添加一个人物</h2>" +
-      '<p class="hint">先自己想一想，再请人工智能起一个很短的草稿。草稿只是参考，必须用自己的话改写，才能钉上时间线。</p>' +
+      "<h2>" + (editing ? "修改这个人物" : "添加一个人物") + "</h2>" +
+      (editing
+        ? '<p class="hint">如果名字、年份或自己写的话不对，先去书、纪录片或百科里核对，再改。保存前要勾上「我已经核对过」。</p>'
+        : '<p class="hint">先自己想一想，再请人工智能起一个很短的草稿。草稿只是参考，必须用自己的话改写，才能钉上时间线。写错了以后还能改。</p>') +
       '<div class="form-row"><label>人物在哪一边</label><select id="p-side"><option value="cn">中国</option><option value="west">西方</option></select></div>' +
       '<div class="form-row"><label>大约哪一年</label><div class="era-row"><select id="p-era"><option value="bce">公元前</option><option value="ce" selected>公元</option></select><input id="p-year" type="number" min="1" max="2026" placeholder="比如 132" /></div></div>' +
       '<p class="hint" id="p-dynasty-hint">填年份后，会提示落在哪一朝</p>' +
@@ -1036,12 +1082,22 @@
       '<p class="hint">不搜全网图片。先在百科数据里确认是哪一位，再从维基共享资源选有许可说明的图。标着「百科选用」的优先。看不清是不是这个人，就先不选。</p>' +
       '<p class="hint" id="p-pic-status"></p>' +
       '<div class="pic-grid" id="p-pic-list"></div>' +
-      '<div class="header-actions"><button class="btn primary" id="p-save" type="button">钉上时间线</button><button class="btn ghost" id="p-cancel" type="button">取消</button></div>'
+      (editing ? '<label class="check-row"><input id="p-checked" type="checkbox" /> 我已经去书、纪录片或百科里核对过</label>' : "") +
+      '<div class="header-actions"><button class="btn primary" id="p-save" type="button">' + (editing ? "保存修改" : "钉上时间线") + '</button><button class="btn ghost" id="p-cancel" type="button">取消</button></div>'
     );
     let lastDraft = "";
     let lastDraftCore = "";
     let pictureChoices = [];
     let selectedPicture = null;
+    $("p-side").value = editing ? editing.side : "cn";
+    $("p-era").value = eraVal;
+    if (yearVal !== "") $("p-year").value = yearVal;
+    if (editing) {
+      $("p-name").value = editing.title || "";
+      $("p-own").value = editing.summary || "";
+      $("p-question").value = editing.why || "";
+      if (editing.verified && $("p-checked")) $("p-checked").checked = true;
+    }
     function refreshDynastyHint() {
       const y = parseYear($("p-era").value, $("p-year").value);
       const hint = $("p-dynasty-hint");
@@ -1060,6 +1116,7 @@
     $("p-era").addEventListener("change", refreshDynastyHint);
     $("p-year").addEventListener("input", refreshDynastyHint);
     $("p-side").addEventListener("change", refreshDynastyHint);
+    refreshDynastyHint();
     $("p-cancel").addEventListener("click", closeModal);
     $("p-pics").addEventListener("click", function () {
       const name = ($("p-name").value || "").trim();
@@ -1150,10 +1207,14 @@
         alert("这和草稿一样。请改成你自己的话。");
         return;
       }
+      if (editing && !$("p-checked").checked) {
+        alert("先去书、纪录片或百科里核对，再勾上「我已经核对过」。");
+        return;
+      }
       const side = $("p-side").value;
       const d = side === "cn" ? dynastyAt(year) : null;
       const ev = {
-        id: "person-" + Date.now(),
+        id: editing ? editing.id : ("person-" + Date.now()),
         year: year,
         side: side,
         title: name,
@@ -1161,7 +1222,8 @@
         why: question,
         tags: ["自己添加", "人物"].concat(d ? [d.label] : []),
         custom: true,
-        kind: "person"
+        kind: "person",
+        verified: editing ? true : false
       };
       if (selectedPicture && isSafeImage(selectedPicture.thumb) && isCommonsFilePage(selectedPicture.page)) {
         ev.portrait = {
@@ -1170,10 +1232,10 @@
           license: selectedPicture.license || "",
           credit: selectedPicture.credit || ""
         };
+      } else if (editing && editing.portrait) {
+        ev.portrait = editing.portrait;
       }
-      const store = loadStore();
-      store.customEvents = (store.customEvents || []).concat([ev]);
-      saveStore(store);
+      upsertCustomEvent(ev);
       closeModal();
       state.mode = "timeline";
       state.query = "";
@@ -1233,7 +1295,7 @@
       "<p>上面一条是中国，下面一条是西方。中国上方的红色色带是朝代骨架：夏商西周……一直到今天。粗圈是朝代大事件，实心圆是你自己加的，金色菱形是读书笔记。</p>" +
       "<p>点朝代色带或顶部「朝代」按钮，可以看这一朝已有哪些事，再往里加自己的时间点。</p>" +
       "<p>在时间线上滚动鼠标滚轮：向上放大、向下缩小（对准鼠标位置缩放）。按住 Shift 再滚，或左右滑动触控板，可以左右移动时间轴。</p>" +
-      "<p>点「添加人物」：先请人工智能起一个很短的草稿，再用自己的话改写才能保存。草稿里会留一个你可以自己去查的问题。画像不搜全网，只从维基共享资源里选有出处的，可以不选。</p>" +
+      "<p>点「添加人物」：先请人工智能起一个很短的草稿，再用自己的话改写才能保存。写错了可以再改：先去书、纪录片或百科里核对，勾上「我已经核对过」再保存。</p>" +
       "<p>闪烁的时间点表示有对应纪录片。鼠标放上去，会展开片名、海报、时长和简介；点「播放」才跳到官方页面。</p>" +
       "<p>右上角「音乐：开/关」可播放背景曲 <em>Chinese Relaxing – Asian Meditation</em>（Pixabay / Villatic_Music，默认关闭）。</p>" +
       "<p>在线版：https://budotding1025.github.io/shiguang-map/ 。笔记存在这台电脑的浏览器里，换设备前请先「导出」。</p>" +
@@ -1300,7 +1362,7 @@
     });
   });
   $("btn-add-event").addEventListener("click", function () { openEventForm(); });
-  $("btn-add-person").addEventListener("click", openPersonForm);
+  $("btn-add-person").addEventListener("click", function () { openPersonForm(); });
   $("btn-add-note").addEventListener("click", function () { openNoteForm(eventById(state.selectedId)); });
   $("btn-export").addEventListener("click", exportData);
   $("btn-help").addEventListener("click", openHelp);

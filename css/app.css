@@ -597,6 +597,16 @@ button { cursor: pointer; }
 .doc-card .kind { font-size: 11px; letter-spacing: 0.04em; color: var(--ink-soft); }
 .doc-card .doc-runtime { margin: 0 0 6px; font-size: 13px; }
 .side-panel .doc-card a { color: var(--indigo); }
+.verify-box { border-color: var(--gold); }
+.check-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 0 0 12px;
+}
+.check-row input { margin-top: 3px; }
 
 .btn.music-on {
   border-color: var(--gold);
