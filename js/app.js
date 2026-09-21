@@ -784,7 +784,20 @@
   });
   searchInput.addEventListener("input", function () {
     state.query = (searchInput.value || "").trim().toLowerCase();
-    renderTimeline();
+    const hits = allEvents()
+      .filter(function (ev) { return matchesQuery(ev, state.query); })
+      .sort(function (a, b) { return a.year - b.year; });
+    if (!state.query) {
+      renderTimeline();
+      return;
+    }
+    if (!hits.length) {
+      renderTimeline();
+      detail.className = "side-panel empty";
+      detail.textContent = "还没有记下「" + searchInput.value.trim() + "」。这张图先放朝代和大事件，你可以点「添加事件」，把书里看到的人物钉上去。";
+      return;
+    }
+    selectEvent(hits[0].id);
   });
   scroller.addEventListener("wheel", function (e) {
     const mostlyHorizontal = Math.abs(e.deltaX) > Math.abs(e.deltaY);

@@ -172,6 +172,16 @@ window.TIMELINE_DATA = {
       tags: ["发明"]
     },
     {
+      id: "zhang-heng",
+      year: 132,
+      side: "cn",
+      era: "empire",
+      title: "张衡与地动仪",
+      summary: "东汉的张衡做出地动仪，远处地震时，机关会指出大概方向。",
+      why: "他既观天，也测地。说明当时已经有人用仪器去记录自然，而不只靠传说。",
+      tags: ["科学", "汉", "张衡", "地动仪"]
+    },
+    {
       id: "rome-roads",
       year: 120,
       approx: true,
