@@ -512,13 +512,38 @@ button { cursor: pointer; }
 .portrait figcaption { font-size: 12px; color: var(--ink-soft); margin-top: 6px; line-height: 1.5; }
 
 .doc-card {
+  display: grid;
+  grid-template-columns: 84px 1fr;
+  gap: 10px;
   border-top: 1px solid var(--rule);
   padding: 10px 0 2px;
   margin-top: 8px;
 }
 .doc-card:first-of-type { border-top: 0; margin-top: 0; padding-top: 0; }
+.doc-cover img,
+.doc-cover-fallback {
+  width: 84px;
+  min-height: 118px;
+  display: block;
+  background: #f1e6d0;
+  border: 1px solid var(--rule);
+  color: var(--ink-soft);
+  font-size: 11px;
+  line-height: 1.4;
+  text-align: center;
+}
+.doc-cover img { height: 118px; object-fit: cover; }
+.doc-cover-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  box-sizing: border-box;
+}
+.doc-cover-fallback[hidden] { display: none; }
 .doc-card h4 { margin: 4px 0 6px; font-size: 15px; }
 .doc-card .kind { font-size: 11px; letter-spacing: 0.04em; color: var(--ink-soft); }
+.doc-card .doc-runtime { margin: 0 0 6px; font-size: 13px; }
 .side-panel .doc-card a { color: var(--indigo); }
 
 .btn.music-on {

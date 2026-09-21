@@ -235,29 +235,65 @@
     return (DATA.documentaries || []).find(function (doc) { return doc.id === id; }) || null;
   }
 
+  function isDoubanPoster(url) {
+    return /^https:\/\/img\d\.doubanio\.com\/view\/photo\/s_ratio_poster\/public\/p\d+\.jpg$/.test(String(url || ""));
+  }
+
+  function isDoubanLink(url) {
+    return /^https:\/\/(movie\.douban\.com\/subject\/\d+\/|search\.douban\.com\/movie\/subject_search\?)/.test(String(url || ""));
+  }
+
+  function attachDocPosters(root) {
+    root.querySelectorAll("img.doc-poster").forEach(function (img) {
+      img.addEventListener("error", function () {
+        img.hidden = true;
+        const fallback = img.parentElement.querySelector(".doc-cover-fallback");
+        if (fallback) fallback.hidden = false;
+      });
+    });
+  }
+
   function renderDocCards(docs) {
     if (!docs || !docs.length) return "";
     let html = '<div class="compare-box"><h3>可看的纪录片</h3>';
-    html += '<p class="hint" style="margin-top:0">只推荐片名和找片方式，不在这里播放。历史剧会单独标明。</p>';
+    html += '<p class="hint" style="margin-top:0">封面用豆瓣海报。豆瓣有时会拦住外站图片，打不开就点封面去豆瓣看。这里不播放视频。</p>';
     docs.forEach(function (doc) {
       const kindLabel = doc.kind === "drama" ? "历史剧" : "纪录片";
       const pair = doc.pairWith ? docById(doc.pairWith) : null;
+      const douban = isDoubanLink(doc.douban) ? doc.douban : "";
       html += '<div class="doc-card">';
+      html += '<div class="doc-cover">';
+      if (isDoubanPoster(doc.poster)) {
+        html += '<img class="doc-poster" alt="' + escapeHtml(doc.title) + ' 的豆瓣封面" referrerpolicy="no-referrer" src="' + escapeHtml(doc.poster) + '" />';
+        if (douban) {
+          html += '<a class="doc-cover-fallback" hidden href="' + escapeHtml(douban) + '" target="_blank" rel="noopener">去豆瓣看封面</a>';
+        }
+      } else if (douban) {
+        html += '<a class="doc-cover-fallback" href="' + escapeHtml(douban) + '" target="_blank" rel="noopener">去豆瓣看封面</a>';
+      } else {
+        html += '<span class="doc-cover-fallback">暂无豆瓣封面</span>';
+      }
+      html += "</div>";
+      html += '<div class="doc-body">';
       html += '<div class="kind">' + kindLabel
         + (doc.side === "cn" ? " · 中国" : " · 西方")
         + (doc.yearsHint ? " · " + escapeHtml(doc.yearsHint) : "")
         + "</div>";
       html += "<h4>" + escapeHtml(doc.title) + "</h4>";
-      html += "<p>" + escapeHtml(doc.blurb || "") + "</p>";
+      html += '<p class="doc-runtime">时长：' + escapeHtml(doc.duration || "见介绍页") + "</p>";
+      html += "<p>简介：" + escapeHtml(doc.blurb || "") + "</p>";
       if (doc.ask) html += '<div class="q">看的时候想一想：' + escapeHtml(doc.ask) + "</div>";
       if (pair) {
         html += '<p class="same">同时期/对照可看：' + escapeHtml(pair.title) + "</p>";
       }
       html += '<p class="diff">怎么找：' + escapeHtml(doc.find || "请搜索片名") + "</p>";
+      if (douban) {
+        html += '<p><a href="' + escapeHtml(douban) + '" target="_blank" rel="noopener">豆瓣条目</a></p>';
+      }
       if (doc.url && /^https:\/\//.test(doc.url)) {
         html += '<p><a href="' + escapeHtml(doc.url) + '" target="_blank" rel="noopener">打开介绍页</a></p>';
       }
-      html += "</div>";
+      html += "</div></div>";
     });
     html += "</div>";
     return html;
@@ -285,6 +321,7 @@
     html += "</div>";
     detail.className = "side-panel";
     detail.innerHTML = html;
+    attachDocPosters(detail);
     detail.querySelectorAll("[data-jump]").forEach(function (btn) {
       btn.addEventListener("click", function () { selectEvent(btn.getAttribute("data-jump")); });
     });
@@ -533,6 +570,7 @@
 
     detail.className = "side-panel";
     detail.innerHTML = html;
+    attachDocPosters(detail);
     detail.querySelectorAll("[data-jump]").forEach(function (btn) {
       btn.addEventListener("click", function () { selectEvent(btn.getAttribute("data-jump")); });
     });
