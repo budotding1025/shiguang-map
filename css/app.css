@@ -479,6 +479,16 @@ button { cursor: pointer; }
 
 .help p { line-height: 1.7; margin: 0 0 10px; font-size: 14px; }
 
+.draft-box {
+  background: #f1e6d0;
+  border: 1px solid var(--rule);
+  padding: 10px;
+  font-size: 13px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+}
+.draft-box[hidden] { display: none; }
+
 .btn.music-on {
   border-color: var(--gold);
   color: var(--gold);

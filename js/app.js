@@ -399,8 +399,9 @@
 
     let html = "";
     html += '<p class="kicker">' + (ev.side === "cn" ? "中国" : "西方")
+      + (ev.kind === "person" ? " · 自己添加的人物" : "")
       + (ev.major ? " · 朝代大事件" : "")
-      + (ev.custom ? " · 自己添加" : "") + "</p>";
+      + (ev.custom && ev.kind !== "person" ? " · 自己添加" : "") + "</p>";
     html += "<h2>" + escapeHtml(ev.title) + "</h2>";
     html += '<div class="year-line">' + formatYear(ev.year, ev.approx)
       + (dyn ? " · " + escapeHtml(dyn.label) : "") + "</div>";
@@ -639,6 +640,163 @@
     $("f-year").focus();
   }
 
+  function normalizeText(s) {
+    return String(s || "").replace(/\s+/g, "");
+  }
+
+  function parseDraftJson(text) {
+    const raw = String(text || "").trim();
+    const fenced = raw.match(/\{[\s\S]*\}/);
+    const slice = fenced ? fenced[0] : raw;
+    try {
+      return JSON.parse(slice);
+    } catch (e) {
+      return { draft: raw, beside: "", explore: "" };
+    }
+  }
+
+  function requestPersonDraft(name, yearLabel, sideLabel, dynastyLabel) {
+    const prompt = [
+      "你在帮一个四年级孩子认识历史人物。只输出 JSON，不要 markdown。",
+      "字段：draft, beside, explore。",
+      "draft：不超过90字，用孩子能懂的话，只写一两件比较确定的事；不确定就写「这一点需要你自己去书里核对」。",
+      "beside：同一时期另一边（中国对西方，西方对中国）可能在发生什么，不确定就明说不确定。不超过40字。",
+      "explore：一个具体的、孩子可以自己去查的问题，不要把答案写进去。",
+      "人物：" + name,
+      "大约时间：" + yearLabel,
+      "这一边：" + sideLabel,
+      dynastyLabel ? ("中国朝代：" + dynastyLabel) : "没有对应朝代色带"
+    ].join("\n");
+    return fetch("https://text.pollinations.ai/openai", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        messages: [
+          { role: "system", content: "你是谨慎的历史助教。宁可少说，不要编故事。只输出 JSON。" },
+          { role: "user", content: prompt }
+        ],
+        model: "openai"
+      })
+    }).then(function (res) {
+      if (!res.ok) throw new Error("draft failed");
+      return res.json();
+    }).then(function (data) {
+      const content = data && data.choices && data.choices[0] && data.choices[0].message
+        ? data.choices[0].message.content
+        : "";
+      return parseDraftJson(content);
+    });
+  }
+
+  function openPersonForm() {
+    openModal(
+      "<h2>添加一个人物</h2>" +
+      '<p class="hint">先自己想一想，再请人工智能起一个很短的草稿。草稿只是参考，必须用自己的话改写，才能钉上时间线。</p>' +
+      '<div class="form-row"><label>人物在哪一边</label><select id="p-side"><option value="cn">中国</option><option value="west">西方</option></select></div>' +
+      '<div class="form-row"><label>大约哪一年</label><div class="era-row"><select id="p-era"><option value="bce">公元前</option><option value="ce" selected>公元</option></select><input id="p-year" type="number" min="1" max="2026" placeholder="比如 132" /></div></div>' +
+      '<p class="hint" id="p-dynasty-hint">填年份后，会提示落在哪一朝</p>' +
+      '<div class="form-row"><label>人物姓名</label><input id="p-name" maxlength="20" placeholder="比如：张衡" /></div>' +
+      '<div class="header-actions"><button class="btn indigo" id="p-draft" type="button">请人工智能起草稿</button></div>' +
+      '<p class="hint" id="p-draft-status"></p>' +
+      '<div class="draft-box" id="p-draft-box" hidden></div>' +
+      '<div class="form-row"><label>用我自己的话写（必填，不要照抄草稿）</label><textarea id="p-own" placeholder="比如：他做了一台能感觉地震的仪器。"></textarea></div>' +
+      '<div class="form-row"><label>我还想弄清的问题（选填）</label><textarea id="p-question" placeholder="比如：地动仪到底准不准？"></textarea></div>' +
+      '<div class="header-actions"><button class="btn primary" id="p-save" type="button">钉上时间线</button><button class="btn ghost" id="p-cancel" type="button">取消</button></div>'
+    );
+    let lastDraft = "";
+    let lastDraftCore = "";
+    function refreshDynastyHint() {
+      const y = parseYear($("p-era").value, $("p-year").value);
+      const hint = $("p-dynasty-hint");
+      if (!hint) return;
+      if ($("p-side").value !== "cn") {
+        hint.textContent = "西方一侧按年份钉。草稿会试着对照中国同一时期。";
+        return;
+      }
+      if (y == null) {
+        hint.textContent = "填年份后，会提示落在哪一朝";
+        return;
+      }
+      const d = dynastyAt(y);
+      hint.textContent = d ? ("大概落在「" + d.label + "」") : "这个年份不在已画的朝代色带里，仍然可以钉上。";
+    }
+    $("p-era").addEventListener("change", refreshDynastyHint);
+    $("p-year").addEventListener("input", refreshDynastyHint);
+    $("p-side").addEventListener("change", refreshDynastyHint);
+    $("p-cancel").addEventListener("click", closeModal);
+    $("p-draft").addEventListener("click", function () {
+      const name = ($("p-name").value || "").trim();
+      const year = parseYear($("p-era").value, $("p-year").value);
+      if (!name) { alert("先写下人物姓名。"); return; }
+      if (year == null) { alert("先填一个大概年份。"); return; }
+      const side = $("p-side").value;
+      const d = side === "cn" ? dynastyAt(year) : null;
+      const btn = $("p-draft");
+      btn.disabled = true;
+      $("p-draft-status").textContent = "正在起草稿，请稍等十几秒…";
+      requestPersonDraft(
+        name,
+        formatYear(year),
+        side === "cn" ? "中国" : "西方",
+        d ? d.label : ""
+      ).then(function (draft) {
+        const lines = [];
+        if (draft.draft) lines.push(draft.draft);
+        if (draft.beside) lines.push("同一时期另一边：" + draft.beside);
+        if (draft.explore) lines.push("你可以自己去查：" + draft.explore);
+        lastDraft = lines.join("\n");
+        lastDraftCore = String(draft.draft || "").trim();
+        const box = $("p-draft-box");
+        box.hidden = false;
+        box.textContent = lastDraft || "这次没有生成草稿，请直接用自己的话写。";
+        if (draft.explore && !$("p-question").value.trim()) {
+          $("p-question").value = draft.explore;
+        }
+        $("p-draft-status").textContent = "草稿只供参考。请用自己的话写下面一栏，照抄不能保存。";
+      }).catch(function () {
+        $("p-draft-status").textContent = "草稿暂时没有生成。你可以先用自己的话写，或稍后再试。";
+      }).then(function () {
+        btn.disabled = false;
+      });
+    });
+    $("p-save").addEventListener("click", function () {
+      const name = ($("p-name").value || "").trim();
+      const year = parseYear($("p-era").value, $("p-year").value);
+      const own = ($("p-own").value || "").trim();
+      const question = ($("p-question").value || "").trim();
+      if (!name) { alert("请写下人物姓名。"); return; }
+      if (year == null || year < YEAR_MIN || year > YEAR_MAX) { alert("请填写一个说得通的年份。"); return; }
+      if (normalizeText(own).length < 8) { alert("请用自己的话至少写一句。"); return; }
+      if (normalizeText(own) === normalizeText(lastDraft) || (lastDraftCore && normalizeText(own) === normalizeText(lastDraftCore))) {
+        alert("这和草稿一样。请改成你自己的话。");
+        return;
+      }
+      const side = $("p-side").value;
+      const d = side === "cn" ? dynastyAt(year) : null;
+      const ev = {
+        id: "person-" + Date.now(),
+        year: year,
+        side: side,
+        title: name,
+        summary: own,
+        why: question,
+        tags: ["自己添加", "人物"].concat(d ? [d.label] : []),
+        custom: true,
+        kind: "person"
+      };
+      const store = loadStore();
+      store.customEvents = (store.customEvents || []).concat([ev]);
+      saveStore(store);
+      closeModal();
+      state.mode = "timeline";
+      state.query = "";
+      if (searchInput) searchInput.value = "";
+      syncMode();
+      selectEvent(ev.id);
+    });
+    $("p-name").focus();
+  }
+
   function openNoteForm(ev) {
     const yearVal = ev ? Math.abs(ev.year) : "";
     const eraVal = ev && ev.year < 0 ? "bce" : "ce";
@@ -688,6 +846,7 @@
       "<p>上面一条是中国，下面一条是西方。中国上方的红色色带是朝代骨架：夏商西周……一直到今天。粗圈是朝代大事件，实心圆是你自己加的，金色菱形是读书笔记。</p>" +
       "<p>点朝代色带或顶部「朝代」按钮，可以看这一朝已有哪些事，再往里加自己的时间点。</p>" +
       "<p>在时间线上滚动鼠标滚轮：向上放大、向下缩小（对准鼠标位置缩放）。按住 Shift 再滚，或左右滑动触控板，可以左右移动时间轴。</p>" +
+      "<p>点「添加人物」：先请人工智能起一个很短的草稿，再用自己的话改写才能保存。草稿里会留一个你可以自己去查的问题。</p>" +
       "<p>对照卡片专门看「相同」和「不同」。有的是同一时期发生的，有的是同类事情、时间并不相同——地图会标明。</p>" +
       "<p>右上角「音乐：开/关」可播放背景曲 <em>Chinese Relaxing – Asian Meditation</em>（Pixabay / Villatic_Music，默认关闭）。</p>" +
       "<p>在线版：https://budotding1025.github.io/shiguang-map/ 。笔记存在这台电脑的浏览器里，换设备前请先「导出」。</p>" +
@@ -753,7 +912,8 @@
       syncMode();
     });
   });
-  $("btn-add-event").addEventListener("click", openEventForm);
+  $("btn-add-event").addEventListener("click", function () { openEventForm(); });
+  $("btn-add-person").addEventListener("click", openPersonForm);
   $("btn-add-note").addEventListener("click", function () { openNoteForm(eventById(state.selectedId)); });
   $("btn-export").addEventListener("click", exportData);
   $("btn-help").addEventListener("click", openHelp);
