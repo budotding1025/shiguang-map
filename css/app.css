@@ -348,6 +348,7 @@ button { cursor: pointer; }
 }
 .doc-pop-card .doc-cover-fallback[hidden] { display: none; }
 .doc-pop-card h4 { margin: 0 0 4px; font-size: 15px; }
+.doc-pop-card .kind { font-size: 11px; color: var(--ink-soft); margin-bottom: 2px; }
 .doc-pop-card p { margin: 0 0 6px; font-size: 12px; line-height: 1.5; }
 .doc-pop-card .btn { margin-top: 2px; }
 .event-label {
