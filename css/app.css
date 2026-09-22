@@ -608,6 +608,7 @@ button { cursor: pointer; }
 .exhibit-card h4 { margin: 4px 0 6px; font-size: 15px; }
 .exhibit-card .kind { font-size: 11px; letter-spacing: 0.04em; color: var(--ink-soft); }
 .side-panel .exhibit-card a { color: var(--indigo); }
+.exhibit-card.optional .kind { color: var(--gold); }
 .exhibit-pop-card .doc-cover-fallback {
   background: rgba(156, 43, 29, 0.08);
   color: var(--cinnabar);

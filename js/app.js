@@ -217,15 +217,25 @@
 
   function exhibitionsForEvent(ev) {
     if (!ev) return [];
-    return (DATA.exhibitions || []).filter(function (ex) {
+    const matched = (DATA.exhibitions || []).filter(function (ex) {
       return (ex.eventIds || []).indexOf(ev.id) !== -1;
-    }).slice(0, 3);
+    });
+    const core = matched.filter(function (ex) { return ex.tier !== "extra"; }).slice(0, 2);
+    const extra = matched.filter(function (ex) { return ex.tier === "extra"; }).slice(0, 2);
+    return core.concat(extra);
   }
 
   function exhibitionsForDynasty(d) {
-    return (DATA.exhibitions || []).filter(function (ex) {
+    const matched = (DATA.exhibitions || []).filter(function (ex) {
       return (ex.dynastyIds || []).indexOf(d.id) !== -1;
-    }).slice(0, 4);
+    });
+    const core = matched.filter(function (ex) { return ex.tier !== "extra"; }).slice(0, 3);
+    const extra = matched.filter(function (ex) { return ex.tier === "extra"; }).slice(0, 3);
+    return core.concat(extra);
+  }
+
+  function coreExhibitions(list) {
+    return (list || []).filter(function (ex) { return ex.tier !== "extra"; });
   }
 
   function docById(id) {
@@ -379,12 +389,13 @@
 
   function renderExhibitCards(exhibits) {
     if (!exhibits || !exhibits.length) return "";
-    let html = '<div class="compare-box"><h3>可去的馆展</h3>';
-    html += '<p class="hint" style="margin-top:0">北京常设为主，临展会写清展期。点链接去官网预约，这里不售票。</p>';
-    exhibits.forEach(function (ex) {
+    const core = exhibits.filter(function (ex) { return ex.tier !== "extra"; });
+    const extra = exhibits.filter(function (ex) { return ex.tier === "extra"; });
+    function oneCard(ex, optional) {
       const link = exhibitUrl(ex);
-      html += '<div class="exhibit-card">';
-      html += '<div class="kind">' + (ex.kind === "special" ? "专题临展" : "常设")
+      let html = '<div class="exhibit-card' + (optional ? " optional" : "") + '">';
+      html += '<div class="kind">' + (optional ? "周末可选 · " : "")
+        + (ex.kind === "special" ? "专题临展" : "常设")
         + (ex.city === "beijing" ? " · 北京" : " · 对照")
         + (ex.yearsHint ? " · " + escapeHtml(ex.yearsHint) : "")
         + "</div>";
@@ -398,8 +409,21 @@
         html += '<p><a class="btn primary" href="' + escapeHtml(link) + '" target="_blank" rel="noopener">打开官网</a></p>';
       }
       html += "</div>";
-    });
-    html += "</div>";
+      return html;
+    }
+    let html = "";
+    if (core.length) {
+      html += '<div class="compare-box"><h3>可去的馆展（主线）</h3>';
+      html += '<p class="hint" style="margin-top:0">北京馆很多，这里只放最常走的。点链接去官网预约，不售票。</p>';
+      core.forEach(function (ex) { html += oneCard(ex, false); });
+      html += "</div>";
+    }
+    if (extra.length) {
+      html += '<div class="compare-box"><h3>周末还可去</h3>';
+      html += '<p class="hint" style="margin-top:0">考古馆、遗址、钟鼓楼、先农坛等。有空再去，不必一次走完。</p>';
+      extra.forEach(function (ex) { html += oneCard(ex, true); });
+      html += "</div>";
+    }
     return html;
   }
 
@@ -526,18 +550,20 @@
       const dyn = ev.side === "cn" ? dynastyAt(ev.year) : null;
       const pinnedDocs = docsForEvent(ev);
       const pinnedExhibits = exhibitionsForEvent(ev);
-      const hasMedia = pinnedDocs.length > 0 || pinnedExhibits.length > 0;
+      const blinkExhibits = coreExhibitions(pinnedExhibits);
+      const hasMedia = pinnedDocs.length > 0 || blinkExhibits.length > 0;
       const mediaHint = [];
       if (pinnedDocs.length) mediaHint.push("有纪录片");
-      if (pinnedExhibits.length) mediaHint.push("有馆展");
+      if (blinkExhibits.length) mediaHint.push("有主线馆展");
+      else if (pinnedExhibits.length) mediaHint.push("有可选馆展");
       dot.title = (dyn ? dyn.label + " · " : "") + formatYear(ev.year, ev.approx) + " " + ev.title
         + (mediaHint.length ? " · " + mediaHint.join("、") : "");
       dot.setAttribute("aria-label", ev.title + (mediaHint.length ? "，" + mediaHint.join("、") : ""));
       if (hasMedia) {
         dot.className += " has-doc";
-        dot.addEventListener("mouseenter", function () { openDocPop(dot, pinnedDocs, pinnedExhibits); });
+        dot.addEventListener("mouseenter", function () { openDocPop(dot, pinnedDocs, blinkExhibits); });
         dot.addEventListener("mouseleave", scheduleHideDocPop);
-        dot.addEventListener("focus", function () { openDocPop(dot, pinnedDocs, pinnedExhibits); });
+        dot.addEventListener("focus", function () { openDocPop(dot, pinnedDocs, blinkExhibits); });
         dot.addEventListener("blur", scheduleHideDocPop);
       }
       dot.addEventListener("click", function () { selectEvent(ev.id); });
@@ -572,7 +598,7 @@
 
     const legend = document.createElement("div");
     legend.className = "legend";
-    legend.innerHTML = '<span>上方红带=中国朝代</span><span><i class="swatch" style="background:transparent;border:2px solid #9c2b1d;box-sizing:border-box"></i>粗圈=朝代大事件</span><span><i class="swatch doc-blink-sample"></i>闪烁=纪录片或馆展</span><span><i class="swatch" style="background:#9c2b1d"></i>实心=你加的</span><span><i class="swatch" style="background:#a67c32;border-radius:1px"></i>菱形=读书笔记</span>';
+    legend.innerHTML = '<span>上方红带=中国朝代</span><span><i class="swatch" style="background:transparent;border:2px solid #9c2b1d;box-sizing:border-box"></i>粗圈=朝代大事件</span><span><i class="swatch doc-blink-sample"></i>闪烁=纪录片/主线馆</span><span><i class="swatch" style="background:#9c2b1d"></i>实心=你加的</span><span><i class="swatch" style="background:#a67c32;border-radius:1px"></i>菱形=读书笔记</span>';
     scroller.appendChild(legend);
     Array.from(scroller.querySelectorAll(".legend")).slice(0, -1).forEach(function (n) { n.remove(); });
   }
@@ -1366,7 +1392,8 @@
       "<p>点朝代色带或顶部「朝代」按钮，可以看这一朝已有哪些事，再往里加自己的时间点。</p>" +
       "<p>在时间线上滚动鼠标滚轮：向上放大、向下缩小（对准鼠标位置缩放）。按住 Shift 再滚，或左右滑动触控板，可以左右移动时间轴。</p>" +
       "<p>点「添加人物」：先请人工智能起一个很短的草稿，再用自己的话改写才能保存。写错了可以再改：先去书、纪录片或百科里核对，勾上「我已经核对过」再保存。</p>" +
-      "<p>闪烁的时间点表示有纪录片或北京馆展。鼠标放上去可看简介；点「播放」或「打开官网」才跳到外链。</p>" +
+      "<p>闪烁的点只提示纪录片和主线馆展（国博、故宫、首博等）。考古馆、钟鼓楼、先农坛等在「周末还可去」。点「馆展提醒」可把临展写进手机日历。</p>" +
+      "<p>家长可用 tools/ 里的 RSS 脚本订阅博物馆公众号，生成待审清单后再人工钉上时间线，不要自动全量写入。</p>" +
       "<p>右上角「音乐：开/关」可播放背景曲 <em>Chinese Relaxing – Asian Meditation</em>（Pixabay / Villatic_Music，默认关闭）。</p>" +
       "<p>在线版：https://budotding1025.github.io/shiguang-map/ 。笔记存在这台电脑的浏览器里，换设备前请先「导出」。</p>" +
       '<button class="btn primary" id="help-ok" type="button">知道了</button></div>'
@@ -1387,6 +1414,100 @@
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
     a.download = "时光地图-笔记备份.json";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  function pad2(n) { return String(n).padStart(2, "0"); }
+
+  function icsDate(d) {
+    return d.getUTCFullYear()
+      + pad2(d.getUTCMonth() + 1)
+      + pad2(d.getUTCDate())
+      + "T"
+      + pad2(d.getUTCHours())
+      + pad2(d.getUTCMinutes())
+      + pad2(d.getUTCSeconds())
+      + "Z";
+  }
+
+  function icsDay(y, m, day) {
+    return String(y) + pad2(m) + pad2(day);
+  }
+
+  function parseExhibitSpan(when) {
+    const text = String(when || "");
+    const m = text.match(/(20\d{2})\s*[-/.年]\s*(\d{1,2})\s*[-/.月]\s*(\d{1,2}).{0,12}?(20\d{2})\s*[-/.年]\s*(\d{1,2})\s*[-/.月]\s*(\d{1,2})/);
+    if (!m) return null;
+    return {
+      start: { y: Number(m[1]), m: Number(m[2]), d: Number(m[3]) },
+      end: { y: Number(m[4]), m: Number(m[5]), d: Number(m[6]) }
+    };
+  }
+
+  function icsEscape(text) {
+    return String(text || "")
+      .replace(/\\/g, "\\\\")
+      .replace(/\n/g, "\\n")
+      .replace(/,/g, "\\,")
+      .replace(/;/g, "\\;");
+  }
+
+  function exportExhibitReminders() {
+    const specials = (DATA.exhibitions || []).filter(function (ex) {
+      return ex.kind === "special" && parseExhibitSpan(ex.when);
+    });
+    if (!specials.length) {
+      alert("现在没有带明确展期的临展可写入日历。常设馆不必提醒。");
+      return;
+    }
+    const now = icsDate(new Date());
+    const lines = [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "PRODID:-//时光地图//馆展提醒//CN",
+      "CALSCALE:GREGORIAN",
+      "METHOD:PUBLISH",
+      "X-WR-CALNAME:时光地图 · 北京馆展提醒"
+    ];
+    specials.forEach(function (ex) {
+      const span = parseExhibitSpan(ex.when);
+      const uid = (ex.id || "exhibit") + "@shiguang-map";
+      const summary = icsEscape("【时光地图】" + ex.title);
+      const desc = icsEscape(
+        (ex.museum || "") + " · " + (ex.place || "") + "\\n"
+        + (ex.blurb || "") + "\\n"
+        + (ex.tip || "") + "\\n"
+        + (ex.url || "")
+      );
+      const location = icsEscape([ex.museum, ex.place].filter(Boolean).join(" · "));
+      lines.push("BEGIN:VEVENT");
+      lines.push("UID:" + uid + "-open");
+      lines.push("DTSTAMP:" + now);
+      lines.push("DTSTART;VALUE=DATE:" + icsDay(span.start.y, span.start.m, span.start.d));
+      lines.push("SUMMARY:" + summary + "（开幕）");
+      lines.push("DESCRIPTION:" + desc);
+      if (location) lines.push("LOCATION:" + location);
+      if (ex.url) lines.push("URL:" + ex.url);
+      lines.push("END:VEVENT");
+
+      const remind = new Date(span.end.y, span.end.m - 1, span.end.d);
+      remind.setDate(remind.getDate() - 7);
+      lines.push("BEGIN:VEVENT");
+      lines.push("UID:" + uid + "-ending");
+      lines.push("DTSTAMP:" + now);
+      lines.push("DTSTART;VALUE=DATE:" + icsDay(remind.getFullYear(), remind.getMonth() + 1, remind.getDate()));
+      lines.push("SUMMARY:" + summary + "（还有约一周结束）");
+      lines.push("DESCRIPTION:" + desc);
+      if (location) lines.push("LOCATION:" + location);
+      if (ex.url) lines.push("URL:" + ex.url);
+      lines.push("END:VEVENT");
+    });
+    lines.push("END:VCALENDAR");
+    const blob = new Blob([lines.join("\r\n")], { type: "text/calendar;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "时光地图-馆展提醒.ics";
     a.click();
     URL.revokeObjectURL(a.href);
   }
@@ -1435,6 +1556,7 @@
   $("btn-add-person").addEventListener("click", function () { openPersonForm(); });
   $("btn-add-note").addEventListener("click", function () { openNoteForm(eventById(state.selectedId)); });
   $("btn-export").addEventListener("click", exportData);
+  $("btn-exhibit-remind").addEventListener("click", exportExhibitReminders);
   $("btn-help").addEventListener("click", openHelp);
   const docPop = $("doc-pop");
   if (docPop) {

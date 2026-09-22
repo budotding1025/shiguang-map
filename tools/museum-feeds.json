@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "note": "把 WeWe-RSS / 今天看啥 生成的订阅地址填进 rssUrl。不要自动写入时光地图，先跑脚本出待审清单。",
+  "beijingKeywords": [
+    "北京", "国博", "国家博物馆", "故宫", "首都博物馆", "首博",
+    "中国考古博物馆", "钟鼓楼", "先农坛", "古代建筑", "大葆台",
+    "规划展览", "中轴线", "孔庙", "国子监", "颐和园", "天坛"
+  ],
+  "excludeKeywords": [
+    "游学", "研学报名", "拼团", "机票", "酒店", "全国巡展招募"
+  ],
+  "feeds": [
+    {
+      "id": "palace-museum",
+      "name": "故宫博物院",
+      "tier": "core",
+      "hint": "官方公众号文章链到 WeWe 后，把生成的 .rss 地址贴到 rssUrl",
+      "rssUrl": "",
+      "homepage": "https://www.dpm.org.cn/"
+    },
+    {
+      "id": "national-museum",
+      "name": "中国国家博物馆",
+      "tier": "core",
+      "rssUrl": "",
+      "homepage": "https://www.chnmuseum.cn/"
+    },
+    {
+      "id": "capital-museum",
+      "name": "首都博物馆",
+      "tier": "core",
+      "rssUrl": "",
+      "homepage": "https://www.capitalmuseum.org.cn/"
+    },
+    {
+      "id": "archaeology-museum",
+      "name": "中国考古博物馆",
+      "tier": "extra",
+      "rssUrl": "",
+      "homepage": "https://hrczh.cass.cn/"
+    },
+    {
+      "id": "xiannongtan",
+      "name": "北京古代建筑博物馆（先农坛）",
+      "tier": "extra",
+      "rssUrl": "",
+      "homepage": "https://www.bjgjg.com/"
+    },
+    {
+      "id": "museum-watch",
+      "name": "博物馆看展览（聚合号，需过滤北京）",
+      "tier": "extra",
+      "rssUrl": "",
+      "homepage": "https://www.jintiankansha.me/"
+    }
+  ]
+}
