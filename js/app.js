@@ -215,12 +215,30 @@
     }).slice(0, 5);
   }
 
+  function exhibitionsForEvent(ev) {
+    if (!ev) return [];
+    return (DATA.exhibitions || []).filter(function (ex) {
+      return (ex.eventIds || []).indexOf(ev.id) !== -1;
+    }).slice(0, 3);
+  }
+
+  function exhibitionsForDynasty(d) {
+    return (DATA.exhibitions || []).filter(function (ex) {
+      return (ex.dynastyIds || []).indexOf(d.id) !== -1;
+    }).slice(0, 4);
+  }
+
   function docById(id) {
     return (DATA.documentaries || []).find(function (doc) { return doc.id === id; }) || null;
   }
 
   function watchUrl(doc) {
     const url = (doc && (doc.watch || doc.url)) || "";
+    return /^https:\/\/\S+$/.test(url) ? url : "";
+  }
+
+  function exhibitUrl(ex) {
+    const url = (ex && ex.url) || "";
     return /^https:\/\/\S+$/.test(url) ? url : "";
   }
 
@@ -232,14 +250,31 @@
       html += '<img class="doc-poster" alt="' + escapeHtml(doc.title) + ' 海报" referrerpolicy="no-referrer" src="' + escapeHtml(doc.poster) + '" />';
       html += '<span class="doc-cover-fallback" hidden>海报暂未显示</span>';
     } else {
-      html += '<span class="doc-cover-fallback">暂无海报</span>';
+      html += '<span class="doc-cover-fallback">纪录片</span>';
     }
     html += "</div><div>";
+    html += '<div class="kind">纪录片</div>';
     html += "<h4>" + escapeHtml(doc.title) + "</h4>";
     html += "<p>时长：" + escapeHtml(doc.duration || "见官方页面") + "</p>";
     html += "<p>" + escapeHtml(doc.blurb || "") + "</p>";
     if (watch) {
       html += '<a class="btn primary" href="' + escapeHtml(watch) + '" target="_blank" rel="noopener">播放</a>';
+    }
+    html += "</div></article>";
+    return html;
+  }
+
+  function renderExhibitPopCard(ex) {
+    const link = exhibitUrl(ex);
+    let html = '<article class="doc-pop-card exhibit-pop-card">';
+    html += '<div class="doc-cover"><span class="doc-cover-fallback">' + (ex.city === "beijing" ? "北京" : "对照") + "</span></div><div>";
+    html += '<div class="kind">' + (ex.kind === "special" ? "专题临展" : "常设 / 馆展")
+      + " · " + escapeHtml(ex.museum || "") + "</div>";
+    html += "<h4>" + escapeHtml(ex.title) + "</h4>";
+    html += "<p>展期：" + escapeHtml(ex.when || "见官网") + "</p>";
+    html += "<p>" + escapeHtml(ex.blurb || "") + "</p>";
+    if (link) {
+      html += '<a class="btn primary" href="' + escapeHtml(link) + '" target="_blank" rel="noopener">打开官网</a>';
     }
     html += "</div></article>";
     return html;
@@ -257,11 +292,13 @@
     docPopTimer = setTimeout(hideDocPop, 280);
   }
 
-  function openDocPop(anchor, docs) {
+  function openDocPop(anchor, docs, exhibits) {
     const pop = $("doc-pop");
-    if (!pop || !docs.length) return;
+    docs = docs || [];
+    exhibits = exhibits || [];
+    if (!pop || (!docs.length && !exhibits.length)) return;
     clearTimeout(docPopTimer);
-    pop.innerHTML = docs.map(renderDocPopCard).join("");
+    pop.innerHTML = docs.map(renderDocPopCard).concat(exhibits.map(renderExhibitPopCard)).join("");
     attachDocPosters(pop);
     pop.hidden = false;
     const rect = anchor.getBoundingClientRect();
@@ -340,6 +377,32 @@
     return html;
   }
 
+  function renderExhibitCards(exhibits) {
+    if (!exhibits || !exhibits.length) return "";
+    let html = '<div class="compare-box"><h3>可去的馆展</h3>';
+    html += '<p class="hint" style="margin-top:0">北京常设为主，临展会写清展期。点链接去官网预约，这里不售票。</p>';
+    exhibits.forEach(function (ex) {
+      const link = exhibitUrl(ex);
+      html += '<div class="exhibit-card">';
+      html += '<div class="kind">' + (ex.kind === "special" ? "专题临展" : "常设")
+        + (ex.city === "beijing" ? " · 北京" : " · 对照")
+        + (ex.yearsHint ? " · " + escapeHtml(ex.yearsHint) : "")
+        + "</div>";
+      html += "<h4>" + escapeHtml(ex.title) + "</h4>";
+      html += "<p>" + escapeHtml(ex.museum || "") + (ex.place ? " · " + escapeHtml(ex.place) : "") + "</p>";
+      html += '<p class="doc-runtime">展期：' + escapeHtml(ex.when || "见官网") + "</p>";
+      html += "<p>" + escapeHtml(ex.blurb || "") + "</p>";
+      if (ex.ask) html += '<div class="q">到馆时想一想：' + escapeHtml(ex.ask) + "</div>";
+      if (ex.tip) html += '<p class="diff">出门前提醒：' + escapeHtml(ex.tip) + "</p>";
+      if (link) {
+        html += '<p><a class="btn primary" href="' + escapeHtml(link) + '" target="_blank" rel="noopener">打开官网</a></p>';
+      }
+      html += "</div>";
+    });
+    html += "</div>";
+    return html;
+  }
+
   function renderDynastyDetail(d) {
     const list = eventsInDynasty(d);
     let html = "";
@@ -357,6 +420,7 @@
     }
     html += "</div>";
     html += renderDocCards(docsForDynasty(d));
+    html += renderExhibitCards(exhibitionsForDynasty(d));
     html += '<div class="panel-actions">';
     html += '<button class="btn cinnabar" id="add-in-dynasty" type="button">在「' + escapeHtml(d.label) + '」加时间点</button>';
     html += "</div>";
@@ -461,14 +525,19 @@
       dot.style.left = x + "px";
       const dyn = ev.side === "cn" ? dynastyAt(ev.year) : null;
       const pinnedDocs = docsForEvent(ev);
+      const pinnedExhibits = exhibitionsForEvent(ev);
+      const hasMedia = pinnedDocs.length > 0 || pinnedExhibits.length > 0;
+      const mediaHint = [];
+      if (pinnedDocs.length) mediaHint.push("有纪录片");
+      if (pinnedExhibits.length) mediaHint.push("有馆展");
       dot.title = (dyn ? dyn.label + " · " : "") + formatYear(ev.year, ev.approx) + " " + ev.title
-        + (pinnedDocs.length ? " · 有纪录片" : "");
-      dot.setAttribute("aria-label", ev.title + (pinnedDocs.length ? "，有纪录片" : ""));
-      if (pinnedDocs.length) {
+        + (mediaHint.length ? " · " + mediaHint.join("、") : "");
+      dot.setAttribute("aria-label", ev.title + (mediaHint.length ? "，" + mediaHint.join("、") : ""));
+      if (hasMedia) {
         dot.className += " has-doc";
-        dot.addEventListener("mouseenter", function () { openDocPop(dot, pinnedDocs); });
+        dot.addEventListener("mouseenter", function () { openDocPop(dot, pinnedDocs, pinnedExhibits); });
         dot.addEventListener("mouseleave", scheduleHideDocPop);
-        dot.addEventListener("focus", function () { openDocPop(dot, pinnedDocs); });
+        dot.addEventListener("focus", function () { openDocPop(dot, pinnedDocs, pinnedExhibits); });
         dot.addEventListener("blur", scheduleHideDocPop);
       }
       dot.addEventListener("click", function () { selectEvent(ev.id); });
@@ -503,7 +572,7 @@
 
     const legend = document.createElement("div");
     legend.className = "legend";
-    legend.innerHTML = '<span>上方红带=中国朝代</span><span><i class="swatch" style="background:transparent;border:2px solid #9c2b1d;box-sizing:border-box"></i>粗圈=朝代大事件</span><span><i class="swatch doc-blink-sample"></i>闪烁=有纪录片，悬停可看</span><span><i class="swatch" style="background:#9c2b1d"></i>实心=你加的</span><span><i class="swatch" style="background:#a67c32;border-radius:1px"></i>菱形=读书笔记</span>';
+    legend.innerHTML = '<span>上方红带=中国朝代</span><span><i class="swatch" style="background:transparent;border:2px solid #9c2b1d;box-sizing:border-box"></i>粗圈=朝代大事件</span><span><i class="swatch doc-blink-sample"></i>闪烁=纪录片或馆展</span><span><i class="swatch" style="background:#9c2b1d"></i>实心=你加的</span><span><i class="swatch" style="background:#a67c32;border-radius:1px"></i>菱形=读书笔记</span>';
     scroller.appendChild(legend);
     Array.from(scroller.querySelectorAll(".legend")).slice(0, -1).forEach(function (n) { n.remove(); });
   }
@@ -610,6 +679,7 @@
     }
 
     html += renderDocCards(docsForEvent(ev));
+    html += renderExhibitCards(exhibitionsForEvent(ev));
 
     if (ev.custom) {
       html += '<div class="compare-box verify-box">';
@@ -1296,7 +1366,7 @@
       "<p>点朝代色带或顶部「朝代」按钮，可以看这一朝已有哪些事，再往里加自己的时间点。</p>" +
       "<p>在时间线上滚动鼠标滚轮：向上放大、向下缩小（对准鼠标位置缩放）。按住 Shift 再滚，或左右滑动触控板，可以左右移动时间轴。</p>" +
       "<p>点「添加人物」：先请人工智能起一个很短的草稿，再用自己的话改写才能保存。写错了可以再改：先去书、纪录片或百科里核对，勾上「我已经核对过」再保存。</p>" +
-      "<p>闪烁的时间点表示有对应纪录片。鼠标放上去，会展开片名、海报、时长和简介；点「播放」才跳到官方页面。</p>" +
+      "<p>闪烁的时间点表示有纪录片或北京馆展。鼠标放上去可看简介；点「播放」或「打开官网」才跳到外链。</p>" +
       "<p>右上角「音乐：开/关」可播放背景曲 <em>Chinese Relaxing – Asian Meditation</em>（Pixabay / Villatic_Music，默认关闭）。</p>" +
       "<p>在线版：https://budotding1025.github.io/shiguang-map/ 。笔记存在这台电脑的浏览器里，换设备前请先「导出」。</p>" +
       '<button class="btn primary" id="help-ok" type="button">知道了</button></div>'

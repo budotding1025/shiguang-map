@@ -597,6 +597,21 @@ button { cursor: pointer; }
 .doc-card .kind { font-size: 11px; letter-spacing: 0.04em; color: var(--ink-soft); }
 .doc-card .doc-runtime { margin: 0 0 6px; font-size: 13px; }
 .side-panel .doc-card a { color: var(--indigo); }
+
+.exhibit-card {
+  border-top: 1px solid var(--rule);
+  padding: 10px 0 2px;
+  margin-top: 8px;
+}
+.exhibit-card:first-of-type { border-top: 0; margin-top: 0; padding-top: 0; }
+.exhibit-card h4 { margin: 4px 0 6px; font-size: 15px; }
+.exhibit-card .kind { font-size: 11px; letter-spacing: 0.04em; color: var(--ink-soft); }
+.side-panel .exhibit-card a { color: var(--indigo); }
+.exhibit-pop-card .doc-cover-fallback {
+  background: rgba(156, 43, 29, 0.08);
+  color: var(--cinnabar);
+  font-weight: 600;
+}
 .verify-box { border-color: var(--gold); }
 .check-row {
   display: flex;
