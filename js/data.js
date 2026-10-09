@@ -777,10 +777,10 @@ window.TIMELINE_DATA = {
       yearsHint: "战国 → 秦统一",
       blurb: "金铁木导演的剧情式历史纪录片。七集分讲齐楚燕韩赵魏秦，看六国怎么走到秦统一之前。台词据称来自正史，仍建议和课本对照。",
       ask: "七国里，你最想先看哪一国？它后来为什么没能统一？",
-      find: "腾讯视频搜索「风云战国之列国」",
+      find: "腾讯视频搜索「风云战国之列国」（腾讯出品，暂无央视官方页）",
       url: "https://v.qq.com/x/cover/mzc00200ldtvj5l.html",
       watch: "https://v.qq.com/x/cover/mzc00200ldtvj5l.html",
-      pairWith: "doc-fengyun-xiaoxiong"
+      pairWith: "doc-fuhuo-juntuan"
     },
     {
       id: "doc-fengyun-xiaoxiong",
@@ -796,9 +796,26 @@ window.TIMELINE_DATA = {
       yearsHint: "战国人物",
       blurb: "《列国》的续篇，改讲七位关键人物（如白起、信陵君、芈八子等）。适合在「秦统一」前后，从人的选择看乱世。",
       ask: "这些人里，谁的选择最让你吃惊？换你会怎么做？",
-      find: "腾讯视频搜索「风云战国之枭雄」",
+      find: "腾讯视频搜索「风云战国之枭雄」（腾讯出品，暂无央视官方页）",
       url: "https://v.qq.com/x/cover/mzc00200xudwjv2.html",
       watch: "https://v.qq.com/x/cover/mzc00200xudwjv2.html",
+      pairWith: "doc-fuhuo-juntuan"
+    },
+    {
+      id: "doc-fuhuo-juntuan",
+      title: "复活的军团",
+      duration: "6集",
+      kind: "doc",
+      side: "cn",
+      eraIds: ["empire"],
+      dynastyIds: ["qin", "eastern-zhou"],
+      eventIds: ["qin-unify", "spring-autumn"],
+      yearsHint: "秦军与统一",
+      blurb: "金铁木导演、央视播出。用考古和史实讲秦军为什么能打赢六国。和《风云战国》系列对照着看：一边看列国兴衰，一边看秦军怎么成为「军团」。",
+      ask: "秦军统一六国，靠的是人多、兵器好，还是规矩更严？",
+      find: "央视纪录片搜索「复活的军团」",
+      url: "https://tv.cctv.com/2012/12/15/VIDA1355567736548198.shtml",
+      watch: "https://tv.cctv.com/2012/12/15/VIDA1355567736548198.shtml",
       pairWith: "doc-fengyun-lieguo"
     },
     {
