@@ -544,6 +544,7 @@
       dot.type = "button";
       dot.className = "event-dot " + ev.side
         + (ev.custom ? " custom" : "")
+        + (ev.kind === "story" ? " story" : "")
         + (ev.major ? " major" : "")
         + (state.selectedId === ev.id ? " selected" : "");
       dot.style.left = x + "px";
@@ -645,8 +646,9 @@
     let html = "";
     html += '<p class="kicker">' + (ev.side === "cn" ? "中国" : "西方")
       + (ev.kind === "person" ? " · 自己添加的人物" : "")
+      + (ev.kind === "story" ? " · 听完自己讲的" : "")
       + (ev.major ? " · 朝代大事件" : "")
-      + (ev.custom && ev.kind !== "person" ? " · 自己添加" : "") + "</p>";
+      + (ev.custom && ev.kind !== "person" && ev.kind !== "story" ? " · 自己添加" : "") + "</p>";
     html += "<h2>" + escapeHtml(ev.title) + "</h2>";
     if (ev.portrait && isSafeImage(ev.portrait.thumb)) {
       html += '<figure class="portrait"><img src="' + escapeHtml(ev.portrait.thumb) + '" alt="' + escapeHtml(ev.title) + ' 的画像" />';
@@ -722,7 +724,9 @@
     }
     if (ev.custom) {
       html += '<button class="btn cinnabar" id="edit-event" type="button">修改</button>';
-      html += '<button class="btn ghost" id="remove-event" type="button">' + (ev.kind === "person" ? "删除这个人物" : "删除这个事件") + "</button>";
+      html += '<button class="btn ghost" id="remove-event" type="button">'
+        + (ev.kind === "person" ? "删除这个人物" : ev.kind === "story" ? "删除这次讲述" : "删除这个事件")
+        + "</button>";
     }
     html += "</div>";
 
@@ -920,6 +924,9 @@
         return;
       }
       const d = $("f-side").value === "cn" ? dynastyAt(year) : null;
+      const baseTags = editing && editing.kind === "story"
+        ? ["自己添加", "听我说"]
+        : ["自己添加"];
       const ev = {
         id: editing ? editing.id : ("custom-" + Date.now()),
         year: year,
@@ -927,10 +934,11 @@
         title: title,
         summary: summary || title,
         why: ($("f-why").value || "").trim(),
-        tags: ["自己添加"].concat(d ? [d.label] : []),
+        tags: baseTags.concat(d ? [d.label] : []),
         custom: true,
         verified: editing ? true : false
       };
+      if (editing && editing.kind) ev.kind = editing.kind;
       upsertCustomEvent(ev);
       closeModal();
       state.mode = "timeline";
@@ -1154,6 +1162,263 @@
         return pictures.slice(0, 6);
       });
     });
+  }
+
+  function requestStoryAgent(payload) {
+    return fetch("https://text.pollinations.ai/openai", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        messages: [
+          {
+            role: "system",
+            content: "你是四年级孩子的历史小助手。只输出 JSON，不要 markdown。温和、短句、鼓励孩子用自己的话。不要编造不确定的年份；不确定就把 year 留空或给大概年份并在 reply 里说明。"
+          },
+          { role: "user", content: payload }
+        ],
+        model: "openai"
+      })
+    }).then(function (res) {
+      if (!res.ok) throw new Error("story agent failed");
+      return res.json();
+    }).then(function (data) {
+      const content = data && data.choices && data.choices[0] && data.choices[0].message
+        ? data.choices[0].message.content
+        : "";
+      return parseDraftJson(content);
+    });
+  }
+
+  function openStoryTellForm() {
+    const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+    openModal(
+      "<h2>听我说今天的故事</h2>" +
+      '<p class="hint">听完历史故事，用一两句自己的话讲出来。可以说到成语。小助手会听你说，再和你聊两句，最后钉上时间线。</p>' +
+      '<div class="form-row"><label>我讲的故事（一两句）</label><textarea id="s-text" placeholder="比如：管仲辅佐齐桓公称霸，讲究尊王攘夷。"></textarea></div>' +
+      '<div class="header-actions">' +
+      '<button class="btn indigo" id="s-mic" type="button">' + (SpeechRec ? "按住说话 / 点一下开始" : "当前浏览器不支持语音，请打字") + "</button>" +
+      '<button class="btn ghost" id="s-listen" type="button">请小助手听一听</button>' +
+      "</div>" +
+      '<p class="hint" id="s-status"></p>' +
+      '<div class="chat-log" id="s-chat"></div>' +
+      '<div class="form-row"><label>我想再回一句（选填）</label><input id="s-reply" maxlength="80" placeholder="回答小助手的问题，或再说一点" /></div>' +
+      '<div class="header-actions"><button class="btn ghost" id="s-chat-send" type="button">再聊一句</button></div>' +
+      '<div class="form-row"><label>钉在哪一边</label><select id="s-side"><option value="cn">中国</option><option value="west">西方</option></select></div>' +
+      '<div class="form-row"><label>大约哪一年</label><div class="era-row"><select id="s-era"><option value="bce" selected>公元前</option><option value="ce">公元</option></select><input id="s-year" type="number" min="1" max="2026" placeholder="比如 685" /></div></div>' +
+      '<p class="hint" id="s-dynasty-hint">小助手听完后，会试着猜年份；你可以改。</p>' +
+      '<div class="form-row"><label>标题（一句话）</label><input id="s-title" maxlength="40" placeholder="比如：管仲相齐" /></div>' +
+      '<div class="header-actions"><button class="btn primary" id="s-save" type="button">钉上时间线</button><button class="btn ghost" id="s-cancel" type="button">取消</button></div>'
+    );
+
+    let recognition = null;
+    let listening = false;
+    let chatTurns = 0;
+    const chatEl = $("s-chat");
+
+    function appendChat(who, text) {
+      if (!text) return;
+      const div = document.createElement("div");
+      div.className = "chat-bubble " + (who === "kid" ? "kid" : "bot");
+      div.innerHTML = '<div class="who">' + (who === "kid" ? "我" : "小助手") + "</div>" + escapeHtml(text);
+      chatEl.appendChild(div);
+      chatEl.scrollTop = chatEl.scrollHeight;
+    }
+
+    function refreshDynastyHint() {
+      const y = parseYear($("s-era").value, $("s-year").value);
+      const hint = $("s-dynasty-hint");
+      if (!hint) return;
+      if ($("s-side").value !== "cn") {
+        hint.textContent = "西方一侧按年份钉。";
+        return;
+      }
+      if (y == null) {
+        hint.textContent = "填年份后，会提示落在哪一朝。";
+        return;
+      }
+      const d = dynastyAt(y);
+      hint.textContent = d ? ("大概落在「" + d.label + "」") : "这个年份不在已画的朝代色带里，仍然可以钉上。";
+    }
+
+    function applyGuess(data) {
+      if (data.title && !$("s-title").value.trim()) $("s-title").value = String(data.title).slice(0, 40);
+      if (data.side === "cn" || data.side === "west") $("s-side").value = data.side;
+      if (data.year != null && data.year !== "") {
+        const y = Number(data.year);
+        if (Number.isFinite(y) && y !== 0) {
+          $("s-era").value = y < 0 ? "bce" : "ce";
+          $("s-year").value = String(Math.abs(Math.round(y)));
+        }
+      } else if (data.yearAbs != null && data.era) {
+        $("s-era").value = data.era === "bce" ? "bce" : "ce";
+        $("s-year").value = String(Math.abs(Number(data.yearAbs)) || "");
+      }
+      refreshDynastyHint();
+    }
+
+    $("s-era").addEventListener("change", refreshDynastyHint);
+    $("s-year").addEventListener("input", refreshDynastyHint);
+    $("s-side").addEventListener("change", refreshDynastyHint);
+    $("s-cancel").addEventListener("click", function () {
+      if (recognition && listening) recognition.stop();
+      closeModal();
+    });
+
+    if (SpeechRec) {
+      recognition = new SpeechRec();
+      recognition.lang = "zh-CN";
+      recognition.continuous = false;
+      recognition.interimResults = true;
+      recognition.onresult = function (event) {
+        let finalText = "";
+        let interim = "";
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const piece = event.results[i][0].transcript;
+          if (event.results[i].isFinal) finalText += piece;
+          else interim += piece;
+        }
+        if (finalText) {
+          const prev = ($("s-text").value || "").trim();
+          $("s-text").value = prev ? (prev + " " + finalText) : finalText;
+          $("s-status").textContent = "听到了。可以改字，再点「请小助手听一听」。";
+        } else if (interim) {
+          $("s-status").textContent = "正在听：「" + interim + "」";
+        }
+      };
+      recognition.onerror = function () {
+        listening = false;
+        $("s-mic").classList.remove("mic-on");
+        $("s-status").textContent = "这次没听清。可以再试，或直接打字。";
+      };
+      recognition.onend = function () {
+        listening = false;
+        $("s-mic").classList.remove("mic-on");
+      };
+      $("s-mic").addEventListener("click", function () {
+        if (listening) {
+          recognition.stop();
+          return;
+        }
+        try {
+          listening = true;
+          $("s-mic").classList.add("mic-on");
+          $("s-status").textContent = "请说一两句，说完会自动停。";
+          recognition.start();
+        } catch (e) {
+          listening = false;
+          $("s-mic").classList.remove("mic-on");
+          $("s-status").textContent = "麦克风打不开。请允许浏览器使用麦克风，或改成打字。";
+        }
+      });
+    } else {
+      $("s-mic").disabled = true;
+    }
+
+    $("s-listen").addEventListener("click", function () {
+      const story = ($("s-text").value || "").trim();
+      if (normalizeText(story).length < 6) {
+        alert("先用一两句话讲出来（可以说或打字）。");
+        return;
+      }
+      const btn = $("s-listen");
+      btn.disabled = true;
+      $("s-status").textContent = "小助手正在听……";
+      appendChat("kid", story);
+      const prompt = [
+        "孩子刚听完历史故事，用自己的话复述如下。",
+        "请输出 JSON 字段：title, year, yearAbs, era, side, reply, question, idiom。",
+        "title：不超过12字的标题。",
+        "year：整数年份，公元前用负数；拿不准就省略 year。",
+        "yearAbs+era：若不用负数，可给 yearAbs 正数和 era=bce|ce。",
+        "side：cn 或 west，默认 cn。",
+        "reply：不超过50字，先表扬孩子讲清楚了哪一点；若提到成语，轻轻点一下这个成语什么意思。",
+        "question：一个很短的追问，启发孩子想一想，不要直接给标准答案。",
+        "idiom：若孩子用到成语就写出该成语，否则空字符串。",
+        "孩子的话：" + story
+      ].join("\n");
+      requestStoryAgent(prompt).then(function (data) {
+        applyGuess(data);
+        const reply = String(data.reply || "你讲得很清楚。");
+        const question = String(data.question || "");
+        appendChat("bot", reply + (question ? " " + question : ""));
+        if (data.idiom) {
+          appendChat("bot", "你还用到了成语「" + String(data.idiom) + "」。以后讲故事也可以再练一练。");
+        }
+        $("s-status").textContent = "可以再回一句，或直接钉上时间线。年份不对就改一下。";
+        chatTurns = 1;
+      }).catch(function () {
+        $("s-status").textContent = "小助手暂时没连上。你可以自己填年份和标题，照样钉上。";
+        appendChat("bot", "我这会儿有点慢。你先自己选个大概年份，把故事钉上也好。");
+      }).then(function () {
+        btn.disabled = false;
+      });
+    });
+
+    $("s-chat-send").addEventListener("click", function () {
+      const line = ($("s-reply").value || "").trim();
+      const story = ($("s-text").value || "").trim();
+      if (!line) { alert("先写一句想回的话。"); return; }
+      if (chatTurns >= 3) {
+        alert("今天先聊到这里。把故事钉上时间线吧。");
+        return;
+      }
+      const btn = $("s-chat-send");
+      btn.disabled = true;
+      appendChat("kid", line);
+      $("s-reply").value = "";
+      const prompt = [
+        "你在和四年级孩子聊他刚复述的历史故事。只输出 JSON：reply, question。",
+        "reply：不超过40字，接住孩子的话，温和纠正明显错误时可很轻地说「也许可以再去书里核对一下」。",
+        "question：还可以再问一句很短的；若话题该收了，question 留空。",
+        "原故事：" + story,
+        "孩子刚说：" + line
+      ].join("\n");
+      requestStoryAgent(prompt).then(function (data) {
+        const reply = String(data.reply || "嗯，有意思。");
+        const question = String(data.question || "");
+        appendChat("bot", reply + (question ? " " + question : ""));
+        chatTurns += 1;
+        if (chatTurns >= 3) $("s-status").textContent = "聊得差不多了，可以把故事钉上时间线。";
+      }).catch(function () {
+        appendChat("bot", "我没听清这句。你可以直接钉上时间线。");
+      }).then(function () {
+        btn.disabled = false;
+      });
+    });
+
+    $("s-save").addEventListener("click", function () {
+      const story = ($("s-text").value || "").trim();
+      const title = ($("s-title").value || "").trim() || story.slice(0, 16);
+      const year = parseYear($("s-era").value, $("s-year").value);
+      if (normalizeText(story).length < 6) { alert("请先写下或说出一两句故事。"); return; }
+      if (year == null || year < YEAR_MIN || year > YEAR_MAX) { alert("请填一个大概年份。"); return; }
+      const side = $("s-side").value;
+      const d = side === "cn" ? dynastyAt(year) : null;
+      const chatBits = Array.prototype.map.call(chatEl.querySelectorAll(".chat-bubble.bot"), function (node) {
+        return node.textContent.replace(/^小助手/, "").trim();
+      }).filter(Boolean).slice(0, 2);
+      const ev = {
+        id: "story-" + Date.now(),
+        year: year,
+        side: side,
+        title: title,
+        summary: story,
+        why: chatBits[0] || "听完故事后自己讲的。",
+        tags: ["自己添加", "听我说"].concat(d ? [d.label] : []),
+        custom: true,
+        kind: "story"
+      };
+      upsertCustomEvent(ev);
+      if (recognition && listening) recognition.stop();
+      closeModal();
+      state.mode = "timeline";
+      state.query = "";
+      if (searchInput) searchInput.value = "";
+      syncMode();
+      selectEvent(ev.id);
+    });
+
+    $("s-text").focus();
   }
 
   function openPersonForm(existing) {
@@ -1391,6 +1656,7 @@
       "<p>上面一条是中国，下面一条是西方。中国上方的红色色带是朝代骨架：夏商西周……一直到今天。粗圈是朝代大事件，实心圆是你自己加的，金色菱形是读书笔记。</p>" +
       "<p>点朝代色带或顶部「朝代」按钮，可以看这一朝已有哪些事，再往里加自己的时间点。</p>" +
       "<p>在时间线上滚动鼠标滚轮：向上放大、向下缩小（对准鼠标位置缩放）。按住 Shift 再滚，或左右滑动触控板，可以左右移动时间轴。</p>" +
+      "<p>点「听我说」：听完历史故事，用一两句话讲出来（可语音）。小助手会听你说、聊两句，再钉上时间线。说到成语也会轻轻点一下。</p>" +
       "<p>点「添加人物」：先请人工智能起一个很短的草稿，再用自己的话改写才能保存。写错了可以再改：先去书、纪录片或百科里核对，勾上「我已经核对过」再保存。</p>" +
       "<p>闪烁的点只提示纪录片和主线馆展（国博、故宫、首博等）。考古馆、钟鼓楼、先农坛等在「周末还可去」。点「馆展提醒」可把临展写进手机日历。</p>" +
       "<p>家长可用 tools/ 里的 RSS 脚本订阅博物馆公众号，生成待审清单后再人工钉上时间线，不要自动全量写入。</p>" +
@@ -1554,6 +1820,7 @@
   });
   $("btn-add-event").addEventListener("click", function () { openEventForm(); });
   $("btn-add-person").addEventListener("click", function () { openPersonForm(); });
+  $("btn-story-tell").addEventListener("click", openStoryTellForm);
   $("btn-add-note").addEventListener("click", function () { openNoteForm(eventById(state.selectedId)); });
   $("btn-export").addEventListener("click", exportData);
   $("btn-exhibit-remind").addEventListener("click", exportExhibitReminders);
